@@ -1,4 +1,4 @@
-export num_dicke_states, num_dicke_ladders
+export num_dicke_states, num_dicke_ladders, num_tls
 
 function num_dicke_states(N::Integer)::Integer
     """Calculate number of Dicke states
@@ -42,6 +42,27 @@ function num_dicke_ladders(N::Integer)::Integer
 end
 
 
+function num_tls(nds::Integer)::Integer
+    """Calculate the number of two-level systems.
 
+    Parameters
+    ----------
+    nds: Integer
+         The number of Dicke states.
+
+    Returns
+    -------
+    N: Integer
+        The number of two-level systems.
+    """
+    if isinteger(sqrt(nds))
+        # N is even
+        N = 2 * (sqrt(nds) - 1)
+    else
+        # N is odd
+        N = 2 * (sqrt(nds + 1 / 4) - 1)
+    end
+    return trunc(Int, N)
+end
 
 
