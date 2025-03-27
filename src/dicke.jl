@@ -1,4 +1,8 @@
-export num_dicke_states, num_dicke_ladders, num_tls
+export num_dicke_states, num_dicke_ladders, num_tls, isdiagonal
+
+using QuantumToolbox
+
+
 
 function num_dicke_states(N::Integer)::Integer
     """Calculate number of Dicke states
@@ -65,4 +69,26 @@ function num_tls(nds::Integer)::Integer
     return trunc(Int, N)
 end
 
+function isdiagonal(mat::Union{AbstractMatrix{T},QuantumObject})::Bool where {T}
+    """
+    Check if the input matrix is diagonal.
+
+    Parameters
+    ==========
+    mat: abstract array/QuantumObject
+        a Matrix
+
+    Returns
+    =======
+    diag: bool
+        True/False depending on whether the input matrix is diagonal.
+    """
+
+
+    if mat isa QuantumObject
+        return mat.data == diagm(diag(mat))
+    else
+        return mat == diagm(diag(mat))
+    end
+end
 
