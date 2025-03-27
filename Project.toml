@@ -3,7 +3,11 @@ uuid = "18c821f0-cbdb-4973-8466-97967e7790ff"
 authors = ["Yanis Le Fur"]
 version = "1.0.0-DEV"
 
+[deps]
+QuantumToolbox = "6c2fb7c5-b903-41d2-bc5e-5a7c320b9fab"
+
 [compat]
+QuantumToolbox = "0.29.1"
 julia = "1.6.7"
 
 [extras]
