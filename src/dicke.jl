@@ -92,3 +92,75 @@ function isdiagonal(mat::Union{AbstractMatrix{T},QuantumObject})::Bool where {T}
     end
 end
 
+
+Base.@kwdef mutable struct Dicke
+    """The Dicke stucture which builds the Lindbladian and Liouvillian matrix.
+
+    Example
+    -------
+    >>> from piqs import Dicke, jspin
+    >>> N = 2
+    >>> jx, jy, jz = jspin(N)
+    >>> jp = jspin(N, "+")
+    >>> jm = jspin(N, "-")
+    >>> ensemble = Dicke(N, emission=1.)
+    >>> L = ensemble.liouvillian()
+
+    Parameters
+    ----------
+    N: int
+        The number of two-level systems.
+
+    hamiltonian: :class: qutip.Qobj
+        A Hamiltonian in the Dicke basis.
+
+        The matrix dimensions are (nds, nds), 
+        with nds being the number of Dicke states. 
+        The Hamiltonian can be built with the operators 
+        given by the `jspin` functions.
+
+    emission: float
+        Incoherent emission coefficient (also nonradiative emission).
+        default: 0.0
+
+    dephasing: float
+        Local dephasing coefficient.
+        default: 0.0
+
+    pumping: float
+        Incoherent pumping coefficient.
+        default: 0.0
+
+    collective_emission: float
+        Collective (superradiant) emmission coefficient.
+        default: 0.0
+
+    collective_pumping: float
+        Collective pumping coefficient.
+        default: 0.0
+
+    collective_dephasing: float
+        Collective dephasing coefficient.
+        default: 0.0
+
+    """
+
+    N::Integer
+    hamiltonian::QuantumObject
+    emission::Real
+    dephasing::Real
+    pumping::Real
+    collective_emission::Real
+    collective_dephasing::Real
+    collective_pumping::Real
+    nds::Integer
+    dshape::Tuple
+
+
+    function Dicke(N, hamiltonian=Nothing, emission=0.0, dephasing=0.0, pumping=0.0, collective_emission=0.0, collective_dephasing=0.0, collective_pumping=0.0)
+        return Dicke(N, hamiltonian, emission, dephasing, pumping, collective_emission, collective_dephasing, collective_pumping, num_dicke_states(N), (num_dicke_states(N), num_dicke_states(N)))
+    end
+
+end
+
+
