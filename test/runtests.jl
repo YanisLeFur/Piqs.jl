@@ -35,3 +35,20 @@ end
 
 
 end
+
+@testset "get_blocks" begin
+    N_list = [1, 2, 5, 7]
+    blocks = [Array([2]), Array([3, 4]), Array([6, 10, 12]),
+        Array([8, 14, 18, 20])]
+    calculated_blocks = [get_blocks(i) for i in N_list]
+    for (i, j) in zip(calculated_blocks, blocks)
+        @test i == j
+    end
+
+end
+
+
+@testset "Dicke" begin
+    H = 0.124 * destroy(2)'destroy(2)
+    d1 = Dicke(3, H)
+end
