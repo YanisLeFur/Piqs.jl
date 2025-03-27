@@ -1,4 +1,4 @@
-export num_dicke_states, num_dicke_ladders, num_tls, isdiagonal
+export num_dicke_states, num_dicke_ladders, num_tls, isdiagonal, get_blocks
 
 using QuantumToolbox
 
@@ -96,16 +96,6 @@ end
 Base.@kwdef mutable struct Dicke
     """The Dicke stucture which builds the Lindbladian and Liouvillian matrix.
 
-    Example
-    -------
-    >>> from piqs import Dicke, jspin
-    >>> N = 2
-    >>> jx, jy, jz = jspin(N)
-    >>> jp = jspin(N, "+")
-    >>> jm = jspin(N, "-")
-    >>> ensemble = Dicke(N, emission=1.)
-    >>> L = ensemble.liouvillian()
-
     Parameters
     ----------
     N: int
@@ -187,4 +177,56 @@ function Base.show(io::IO, d::Dicke)
         println(io, "collective_pumping = $(d.collective_pumping)")
     end
 end
+
+function get_blocks(N::Integer)
+    """
+    Calculate the number of cumulative elements at each block boundary.
+
+    Parameters
+    ----------
+    N: Integer
+        The number of two-level systems.
+
+    Returns
+    -------
+    blocks: np.ndarray
+        An array with the number of cumulative elements at the boundary of
+        each block.
+    """
+    num_blocks = num_dicke_ladders(N)
+    blocks = [i * (N + 2 - i) for i in range(1, num_blocks)]
+    return blocks
+
+end
+
+# function jmm1_dictionary(N::Number)
+#     i::Integer
+#     j::Integer
+#     jmm1_dict::Dict = {}
+#     jmm1_inv::Dict = {}
+#     jmm1_flat::Dict = {}
+#     jmm1_flat_inv::Dict = {}
+#     l::Integer
+#     nds::Integer = num_dicke_states(N)
+#     blocks = get_blocks(N)
+# end
+
+# function lindbladian(d::Dicke)
+#     lindblad_row::Array{Number} = []
+#     lindblad_col::Array{Number} = []
+#     lindblad_dat::Array{Number} = []
+#     jmm1_1::Tuple{Number,Number}
+#     jmm1_2::Tuple{Number,Number}
+#     jmm1_3::Tuple{Number,Number}
+#     jmm1_4::Tuple{Number,Number}
+#     jmm1_5::Tuple{Number,Number}
+#     jmm1_6::Tuple{Number,Number}
+#     jmm1_7::Tuple{Number,Number}
+#     jmm1_8::Tuple{Number,Number}
+#     jmm1_9::Tuple{Number,Number}
+
+#     _1, _2, jmm1_row, jmm1_inv = jmm1_dictionary(N)
+
+#     return lindbladian
+# end
 
