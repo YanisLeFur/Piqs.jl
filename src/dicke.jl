@@ -147,20 +147,44 @@ Base.@kwdef mutable struct Dicke
 
     N::Integer
     hamiltonian::QuantumObject
-    emission::Real
-    dephasing::Real
-    pumping::Real
-    collective_emission::Real
-    collective_dephasing::Real
-    collective_pumping::Real
-    nds::Integer
-    dshape::Tuple
+    emission::Number
+    dephasing::Number
+    pumping::Number
+    collective_emission::Number
+    collective_dephasing::Number
+    collective_pumping::Number
+    nds
+    dshape
 
 
     function Dicke(N, hamiltonian=Nothing, emission=0.0, dephasing=0.0, pumping=0.0, collective_emission=0.0, collective_dephasing=0.0, collective_pumping=0.0)
-        return Dicke(N, hamiltonian, emission, dephasing, pumping, collective_emission, collective_dephasing, collective_pumping, num_dicke_states(N), (num_dicke_states(N), num_dicke_states(N)))
+        return new(N, hamiltonian, emission, dephasing, pumping, collective_emission, collective_dephasing, collective_pumping, num_dicke_states(N), (num_dicke_states(N), num_dicke_states(N)))
     end
 
 end
 
+function Base.show(io::IO, d::Dicke)
+    println(io, "N = $(d.N)")
+    println(io, "Hilbert space dim = $(d.dshape)")
+    println(io, "Number of Dicke states = $(d.nds)")
+    println(io, "Liouvillian space dim = ($(d.nds^2), $(d.nds^2))")
+    if d.emission != 0.0
+        println(io, "emission = $(d.emission)")
+    end
+    if d.dephasing != 0.0
+        println(io, "dephasing = $(d.dephasing)")
+    end
+    if d.pumping != 0.0
+        println(io, "pumping = $(d.pumping)")
+    end
+    if d.collective_emission != 0.0
+        println(io, "collective_emission = $(d.collective_emission)")
+    end
+    if d.collective_dephasing != 0.0
+        println(io, "collective_dephasing = $(d.collective_dephasing)")
+    end
+    if d.collective_pumping != 0.0
+        println(io, "collective_pumping = $(d.collective_pumping)")
+    end
+end
 
