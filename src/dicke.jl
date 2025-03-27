@@ -1,4 +1,4 @@
-export num_dicke_states, num_dicke_ladders, num_tls, isdiagonal, get_blocks
+export num_dicke_states, num_dicke_ladders, num_tls, isdiagonal, get_blocks, j_vals, m_vals, get_index, jmm1_dictionary
 
 using QuantumToolbox
 
@@ -189,7 +189,7 @@ function get_blocks(N::Integer)
 
     Returns
     -------
-    blocks: np.ndarray
+    blocks: Array
         An array with the number of cumulative elements at the boundary of
         each block.
     """
@@ -199,34 +199,135 @@ function get_blocks(N::Integer)
 
 end
 
-# function jmm1_dictionary(N::Number)
-#     i::Integer
-#     j::Integer
-#     jmm1_dict::Dict = {}
-#     jmm1_inv::Dict = {}
-#     jmm1_flat::Dict = {}
-#     jmm1_flat_inv::Dict = {}
-#     l::Integer
-#     nds::Integer = num_dicke_states(N)
-#     blocks = get_blocks(N)
-# end
+function j_min(N::Integer)
+    """
+    Calculate the minimum value of j for given N.
 
-# function lindbladian(d::Dicke)
-#     lindblad_row::Array{Number} = []
-#     lindblad_col::Array{Number} = []
-#     lindblad_dat::Array{Number} = []
-#     jmm1_1::Tuple{Number,Number}
-#     jmm1_2::Tuple{Number,Number}
-#     jmm1_3::Tuple{Number,Number}
-#     jmm1_4::Tuple{Number,Number}
-#     jmm1_5::Tuple{Number,Number}
-#     jmm1_6::Tuple{Number,Number}
-#     jmm1_7::Tuple{Number,Number}
-#     jmm1_8::Tuple{Number,Number}
-#     jmm1_9::Tuple{Number,Number}
+    Parameters
+    ----------
+    N: int
+        Number of two-level systems.
 
-#     _1, _2, jmm1_row, jmm1_inv = jmm1_dictionary(N)
+    Returns
+    -------
+    jmin: float
+        The minimum value of j for odd or even number of two
+        level systems.
+    """
+    if N % 2 == 0
+        return 0
+    else
+        return 0.5
+    end
+end
 
-#     return lindbladian
-# end
+function j_vals(N::Integer)::Vector{Real}
+    """
+    Get the valid values of j for given N.
 
+    Parameters
+    ----------
+    N: Integer
+        The number of two-level systems.
+
+    Returns
+    -------
+    jvals: Array
+        The j values for given N as a 1D array.
+    """
+    j = collect(j_min(N):1:(N/2))
+    return j
+end
+
+function m_vals(j)
+    """
+    Get all the possible values of m or m1 for given j.
+
+    Parameters
+    ----------
+    N: Integer
+        The number of two-level systems.
+
+    Returns
+    -------
+    mvals: Array
+        The m values for given j as a 1D array.
+    """
+    return collect(-j:1:j)
+end
+
+
+function get_index(N, j, m, m1, blocks)
+    """
+    Get the index in the density matrix for this j, m, m1 value.
+
+    Parameters
+    ----------
+    N: int
+        The number of two-level systems.
+
+    j, m, m1: float
+        The j, m, m1 values.
+
+    blocks: np.ndarray
+        An 1D array with the number of cumulative elements at the boundary of
+        each block.
+
+    Returns
+    -------
+    mvals: array
+        The m values for given j.
+    """
+    _k = Int(j - m1)
+    _k_prime = Int(j - m)
+    block_number = Int(N / 2 - j)
+    offset = 0
+
+    if block_number > 0
+        offset = blocks[block_number]
+    end
+
+    i = _k_prime + offset
+    k = _k + offset
+    return (i, k)
+end
+
+
+
+function jmm1_dictionary(N::Number)
+
+    """
+    Get the index in the density matrix for this j, m, m1 value.
+
+    The (j, m, m1) values are mapped to the (i, k) index of a block
+    diagonal matrix which has the structure to capture the permutationally
+    symmetric part of the density matrix. For each (j, m, m1) value, first
+    we get the block by using the "j" value and then the addition in the
+    row/column due to the m and m1 is determined. Four dictionaries are
+    returned giving a map from the (j, m, m1) values to (i, k), the inverse
+    map, a flattened map and the inverse of the flattened map.
+    """
+
+    jmm1_dict::Dict = Dict()
+    jmm1_flat::Dict = Dict()
+    jmm1_inv::Dict = Dict()
+    jmm1_flat_inv::Dict = Dict()
+    nds::Integer = num_dicke_states(N)
+    blocks = get_blocks(N)
+    jvalues = j_vals(N)
+
+    for j in jvalues
+        mvalues = m_vals(j)
+        for m in mvalues
+            for m1 in mvalues
+                i, k = get_index(N, j, m, m1, blocks)
+                jmm1_dict[(i, k)] = (j, m, m1)
+                jmm1_inv[(j, m, m1)] = (i, k)
+                l = nds * i + k
+                jmm1_flat[l] = (j, m, m1)
+                jmm1_flat_inv[(j, m, m1)] = l
+            end
+        end
+    end
+    return [jmm1_dict, jmm1_inv, jmm1_flat, jmm1_flat_inv]
+end
