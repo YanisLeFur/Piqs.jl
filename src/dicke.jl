@@ -1,4 +1,4 @@
-export num_dicke_states, num_dicke_ladders, num_tls, isdiagonal, get_blocks, j_vals, m_vals, get_index, jmm1_dictionary
+export num_dicke_states, num_dicke_ladders, num_tls, isdiagonal, get_blocks, j_vals, m_vals, get_index, jmm1_dictionary, Dicke
 
 using QuantumToolbox
 
@@ -93,7 +93,7 @@ function isdiagonal(mat::Union{AbstractMatrix{T},QuantumObject})::Bool where {T}
 end
 
 
-Base.@kwdef mutable struct Dicke
+mutable struct Dicke
     """The Dicke stucture which builds the Lindbladian and Liouvillian matrix.
 
     Parameters
@@ -133,10 +133,11 @@ Base.@kwdef mutable struct Dicke
         Collective dephasing coefficient.
         default: 0.0
 
+
     """
 
     N::Integer
-    hamiltonian::QuantumObject
+    hamiltonian
     emission::Number
     dephasing::Number
     pumping::Number
@@ -147,7 +148,7 @@ Base.@kwdef mutable struct Dicke
     dshape
 
 
-    function Dicke(N, hamiltonian=Nothing, emission=0.0, dephasing=0.0, pumping=0.0, collective_emission=0.0, collective_dephasing=0.0, collective_pumping=0.0)
+    function Dicke(N; hamiltonian=Nothing, emission=0.0, dephasing=0.0, pumping=0.0, collective_emission=0.0, collective_dephasing=0.0, collective_pumping=0.0)
         return new(N, hamiltonian, emission, dephasing, pumping, collective_emission, collective_dephasing, collective_pumping, num_dicke_states(N), (num_dicke_states(N), num_dicke_states(N)))
     end
 
@@ -331,3 +332,4 @@ function jmm1_dictionary(N::Number)
     end
     return [jmm1_dict, jmm1_inv, jmm1_flat, jmm1_flat_inv]
 end
+
