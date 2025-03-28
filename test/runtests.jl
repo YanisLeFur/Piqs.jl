@@ -214,7 +214,7 @@ end
     system = Dicke(N, emission=gE, pumping=gP, dephasing=gD, collective_emission=gCE, collective_pumping=gCP, collective_dephasing=gCD)
     lindbladian_result = lindbladian(system)
     Ldata = [-0.6 0 0 0.6; 0 -0.9 0 0; 0 0 -0.9 0; 0.6 0 0 -0.6]
-    lindbladian_correct = Qobj(sparse(Ldata), dims=(2, 2))
+    lindbladian_correct = Qobj(sparse(Ldata), dims=(2), type=SuperOperator)
     @test isapprox(lindbladian_result, lindbladian_correct)
 
 
@@ -245,8 +245,33 @@ end
         0.05,
         0.1,
         -0.25)
-    lindbladian_correct = Qobj(sparse(Ldata), dims=(4, 4))
+    lindbladian_correct = Qobj(sparse(Ldata), dims=(4), type=SuperOperator)
     @test isapprox(lindbladian_correct, lindbladian_result)
-
-
 end
+
+@testset "liouvillian" begin
+
+    true_L = [-4 0 0 3; 0 -3.54999995 0 0; 0 0 -3.54999995 0; 4 0 0 -3]
+    true_L = Qobj(true_L, dims=(2), type=SuperOperator)
+    true_H = [1.0+0im 1.0+0im; 1.0+0im -1.0+0im]
+    true_H = Qobj(true_H, dims=(2))
+    true_liouvillian = [-4 -1im 1im 3; -1im -3.54999995+2im 0 1im; 1im 0 -3.54999995-2im -1im; 4 +1im -1im -3]
+    true_liouvillian = Qobj(true_liouvillian, dims=(2), type=SuperOperator)
+    N = 1
+    test_piqs = Dicke(1, hamiltonian=sigmaz() + sigmax(),
+        pumping=1, collective_pumping=2, emission=1,
+        collective_emission=3, dephasing=0.1)
+    test_liouvillian = liouvillian_dicke(test_piqs)
+    test_hamiltonian = test_piqs.hamiltonian
+    isapprox(test_liouvillian, true_liouvillian)
+    isapprox(test_hamiltonian, true_H)
+
+    # no Hamiltonian
+    test_piqs = Dicke(N,
+        pumping=1, collective_pumping=2, emission=1,
+        collective_emission=3, dephasing=0.1)
+    liouv = liouvillian_dicke(test_piqs)
+    lindblad = lindbladian(test_piqs)
+    liouv == lindblad
+end
+

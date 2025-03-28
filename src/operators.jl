@@ -1,4 +1,4 @@
-export lindbladian
+export lindbladian, liouvillian_dicke
 
 
 function lindbladian(d::Dicke)::QuantumObject
@@ -45,6 +45,21 @@ function lindbladian(d::Dicke)::QuantumObject
         end
     end
     lindblad_matrix = sparse((lindblad_row), (lindblad_col), Float64.(lindblad_data), nds^2, nds^2)
-    lindblad_qobj = Qobj(lindblad_matrix, dims=(nds, nds))
     return lindblad_qobj
+end
+
+function liouvillian_dicke(d::Dicke)::QuantumObject
+    """Build the total Liouvillian using the Dicke basis.
+
+        Returns
+        -------
+        liouv: QuantumObject
+            The Liouvillian matrix for the system.
+        """
+
+    if d.hamiltonian == Nothing
+        return lindbladian(d)
+    else
+        return lindbladian(d) - 1im * spre(d.hamiltonian) + 1im * spost(d.hamiltonian)
+    end
 end
