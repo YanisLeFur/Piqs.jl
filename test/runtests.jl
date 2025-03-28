@@ -202,6 +202,51 @@ end
 
 end
 
-d = Dicke(1)
-jmm1 = (1, 1, 1)
-gamma1(d, Jmm1)
+@testset "Lindbladian" begin
+    N = 1
+    gCE = 0.5
+    gCD = 0.5
+    gCP = 0.5
+    gE = 0.1
+    gD = 0.1
+    gP = 0.1
+
+    system = Dicke(N, emission=gE, pumping=gP, dephasing=gD, collective_emission=gCE, collective_pumping=gCP, collective_dephasing=gCD)
+    lindbladian_result = lindbladian(system)
+    Ldata = [-0.6 0 0 0.6; 0 -0.9 0 0; 0 0 -0.9 0; 0.6 0 0 -0.6]
+    lindbladian_correct = Qobj(sparse(Ldata), dims=(2, 2))
+    @test isapprox(lindbladian_result, lindbladian_correct)
+
+
+    N = 2
+    gCE = 0.5
+    gCD = 0.5
+    gCP = 0.5
+    gE = 0.1
+    gD = 0.1
+    gP = 0.1
+    system = Dicke(N, emission=gE, pumping=gP, dephasing=gD,
+        collective_emission=gCE, collective_pumping=gCP,
+        collective_dephasing=gCD)
+
+    lindbladian_result = lindbladian(system)
+    Ldata = zeros((16, 16))
+    Ldata[1, 1], Ldata[1, 6], Ldata[1, 16] = -1.2, 1.1, 0.1
+    Ldata[2, 2], Ldata[2, 7] = -2, 1.1
+    Ldata[3, 3] = -2.2999999999999998
+    Ldata[5, 5], Ldata[5, 10] = -2, 1.1
+    Ldata[6, 1], Ldata[6, 6], Ldata[6, 11], Ldata[6, 16] = (1.1, -2.25,
+        1.1, 0.05)
+    Ldata[7, 2], Ldata[7, 7] = 1.1, -2
+    Ldata[9, 9] = -2.2999999999999998
+    Ldata[10, 5], Ldata[10, 10] = 1.1, -2
+    Ldata[11, 6], Ldata[11, 11], Ldata[11, 16] = 1.1, -1.2, 0.1
+    Ldata[16, 1], Ldata[16, 6], Ldata[16, 11], Ldata[16, 16] = (0.1,
+        0.05,
+        0.1,
+        -0.25)
+    lindbladian_correct = Qobj(sparse(Ldata), dims=(4, 4))
+    @test isapprox(lindbladian_correct, lindbladian_result)
+
+
+end
