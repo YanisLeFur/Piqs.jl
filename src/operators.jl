@@ -45,6 +45,7 @@ function lindbladian(d::Dicke)::QuantumObject
         end
     end
     lindblad_matrix = sparse((lindblad_row), (lindblad_col), Float64.(lindblad_data), nds^2, nds^2)
+    lindblad_qobj = Qobj(lindblad_matrix, dims=(sqrt(nds), sqrt(nds)), type=SuperOperator)
     return lindblad_qobj
 end
 
