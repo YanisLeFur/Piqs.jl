@@ -176,3 +176,32 @@ end
     @test d4 == d4_hardcoded
 
 end
+
+@testset "gamma_set" begin
+
+    N = 6
+    collective_emission = 1.0
+    emission = 1.0
+    dephasing = 1.0
+    pumping = 1.0
+    collective_pumping = 1.0
+    model = Dicke(N, collective_emission=collective_emission,
+        emission=emission, dephasing=dephasing,
+        pumping=pumping, collective_pumping=collective_pumping)
+    tau_calculated = [gamma3(model, (3, 1, 1)),
+        gamma2(model, (2, 1, 1)),
+        gamma4(model, (1, 1, 1)),
+        gamma5(model, (3, 0, 0)),
+        gamma1(model, (2, 0, 0)),
+        gamma6(model, (1, 0, 0)),
+        gamma7(model, (3, -1, -1)),
+        gamma8(model, (2, -1, -1)),
+        gamma9(model, (1, -1, -1))]
+    tau_real = [2.0, 8.0, 0.3333333333333333, 1.5, -19.5, 0.6666666666666666, 2.0, 8.0, 0.3333333333333333]
+    @test tau_calculated == tau_real
+
+end
+
+d = Dicke(1)
+jmm1 = (1, 1, 1)
+gamma1(d, Jmm1)
