@@ -58,10 +58,10 @@ function liouvillian_dicke(d::Dicke)::QuantumObject
             The Liouvillian matrix for the system.
         """
 
-    if isnothing(d.hamiltonian)
+    if d.hamiltonian == Nothing
         return lindbladian(d)
     else
-        return lindbladian(d) - 1im * spre(d.hamiltonian) + 1im * spost(d.hamiltonian)
+        return lindbladian(d) - 1im * QuantumToolbox.spre(d.hamiltonian) + 1im * QuantumToolbox.spost(d.hamiltonian)
     end
 end
 
