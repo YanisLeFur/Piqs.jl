@@ -39,7 +39,12 @@ jobs:
       - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
       - name: Run tests with coverage
-        run: julia --project -e 'using Pkg; Pkg.test(coverage=true)' using Coverage LCOV.writefile("lcov.info", process_folder())'
+        run: |
+          julia --project -e '
+            using Pkg;
+            Pkg.test(coverage=true);
+            using Coverage;
+            LCOV.writefile("lcov.info", process_folder())'
       - name: Upload to Codecov
         uses: codecov/codecov-action@v4
         with:
