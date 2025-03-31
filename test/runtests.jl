@@ -24,7 +24,7 @@ end
     a1 = Array([[1, 2], [3, 4]])
     mat1 = reshape(collect(Iterators.flatten(a1)), (length(a1[1]), length(a1)))
     mat2 = qeye(2)
-    a3 = Array([[1 + 1im, 0.0], [0.0, 2 - 2im]])
+    a3 = Array([[1 + 1im 0.0], [0.0, 2 - 2im]])
     mat3 = reshape(collect(Iterators.flatten(a3)), (length(a3[1]), length(a3)))
     mat4 = reshape(collect(1:2:18), (3, 3))
 
@@ -256,6 +256,7 @@ end
     true_L = Qobj(true_L, dims=(2), type=SuperOperator)
     true_H = [1.0+0im 1.0+0im; 1.0+0im -1.0+0im]
     true_H = Qobj(true_H, dims=(2))
+
     true_liouvillian = [-4 -1im 1im 3; -1im -3.54999995+2im 0 1im; 1im 0 -3.54999995-2im -1im; 4 +1im -1im -3]
     true_liouvillian = Qobj(true_liouvillian, dims=(2), type=SuperOperator)
     N = 1
@@ -264,8 +265,8 @@ end
         collective_emission=3, dephasing=0.1)
     test_liouvillian = liouvillian_dicke(test_piqs)
     test_hamiltonian = test_piqs.hamiltonian
-    isapprox(test_liouvillian, true_liouvillian)
-    isapprox(test_hamiltonian, true_H)
+    @test isapprox(test_liouvillian, true_liouvillian)
+    @test isapprox(test_hamiltonian, true_H)
 
     # no Hamiltonian
     test_piqs = Dicke(N,
@@ -275,6 +276,7 @@ end
     lindblad = lindbladian(test_piqs)
     liouv == lindblad
 end
+
 
 @testset "isdicke" begin
     N = 2
@@ -340,3 +342,4 @@ end
     @test_throws ArgumentError pisolve(non_diag_system, diag_initial_state, tlist)
 
 end
+
