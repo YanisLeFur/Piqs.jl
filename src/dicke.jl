@@ -379,50 +379,34 @@ function pisolve(d::Dicke, initial_state::QuantumObject, tlist)
     return result
 end
 
-function prune_eigenstates(d::Dicke, liouvillian::QuantumObject)::Vector
-    """Remove spurious eigenvalues and eigenvectors of the Liouvillian.
-
-    Spurious means that the given eigenvector has elements outside of the
-    block-diagonal matrix.
+function block_matrix(N::Integer)::Matrix{Int}
+    """Construct the block-diagonal matrix for the Dicke basis.
 
     Parameters
     ----------
-    liouvillian_eigenstates: list
-        A list with the eigenvalues and eigenvectors of the Liouvillian
-        including spurious ones.
+    N: int
+        Number of two-level systems.
 
     Returns
     -------
-    correct_eigenstates: list
-        The list with the correct eigenvalues and eigenvectors of the
-        Liouvillian.
+    block_matr: Matrix
+        A 2D block-diagonal matrix of ones with dimension (nds, nds),
+        where nds is the number of Dicke states for N two-level
+        systems.
     """
-    eig_val, eig_vec = eigenstates(liouvillian)
-    N = d.N
-    block_mat = block_matrix(N)
-    nnz_tuple_bm = [(i, j) for (i, j) in zip(findall(!iszero, block_mat))]
+    nds = num_dicke_states(N)
+    blocks_dimensions = Int(N ÷ 2 + 1 - 0.5 * (N % 2))
+    blocks_list = [2 * (i + 1 * (N % 2)) + 1 * ((N + 1) % 2) for i in 0:(blocks_dimensions-1)]
+    blocks_list = reverse(blocks_list)
 
-    forbidden_eig_index = []
-    for k in 1:length(eig_val)
-        dm = vec2mat(eig_vec[k])
-        nnz_tuple = [(i, j) for (i, j) in zip(findall(!iszero, dm.data))]
-        for i in nnz_tuple
-            if i
-                not in nnz_tuple_bm
-                if nd.round(dm[i], tol) != 0
-                    forbidden_eig_index.append(k)
-                end
-            end
-        end
+    square_blocks = []
+    for i in blocks_list
+        push!(square_blocks, ones(Int, i, i))
     end
 
-
-    forbidden_eig_index = unique(forbidden_eig_index)
-    correct_eig_val = deleteat!(eig_val, forbidden_eig_index)
-    correct_eig_vec = deleteat!(eig_vec, forbidden_eig_index)
-    correct_eigenstates = (correct_eig_val, correct_eig_vec)
-    return correct_eigenstates
+    return reduce(hcat, [reduce(vcat, square_blocks[i:end]) for i in 1:length(square_blocks)])
 end
+
 
 function c_ops(d::Dicke)::Vector
     """Build collapse operators in the full Hilbert space 2^N.
@@ -447,3 +431,58 @@ function coefficient_matrix(d::Dicke)
     """
     return coefficient_matrix(Pim(N=d.N, emission=d.emission, dephasing=d.dephasing, pumping=d.pumping, collective_emission=d.collective_emission, collective_dephasing=d.collective_dephasing, collective_pumping=d.collective_pumping))
 end
+
+
+
+
+
+
+
+# REMOVED FUNCTIONS
+
+
+# function prune_eigenstates(d::Dicke, liouvillian::QuantumObject)::Vector
+#     """Remove spurious eigenvalues and eigenvectors of the Liouvillian.
+
+#     Spurious means that the given eigenvector has elements outside of the
+#     block-diagonal matrix.
+
+#     Parameters
+#     ----------
+#     liouvillian_eigenstates: list
+#         A list with the eigenvalues and eigenvectors of the Liouvillian
+#         including spurious ones.
+
+#     Returns
+#     -------
+#     correct_eigenstates: list
+#         The list with the correct eigenvalues and eigenvectors of the
+#         Liouvillian.
+#     """
+#     eig_val, eig_vec = eigenstates(liouvillian)
+#     N = d.N
+#     block_mat = block_matrix(N)
+#     nnz_tuple_bm = [(i, j) for (i, j) in zip(findall(!iszero, block_mat))]
+
+#     forbidden_eig_index = []
+#     for k in 1:length(eig_val)
+#         dm = vec2mat(eig_vec[k])
+#         nnz_tuple = [(i, j) for (i, j) in zip(findall(!iszero, dm.data))]
+#         for i in nnz_tuple
+#             if i
+#                 not in nnz_tuple_bm
+#                 if nd.round(dm[i], tol) != 0
+#                     forbidden_eig_index.append(k)
+#                 end
+#             end
+#         end
+#     end
+
+
+#     forbidden_eig_index = unique(forbidden_eig_index)
+#     correct_eig_val = deleteat!(eig_val, forbidden_eig_index)
+#     correct_eig_vec = deleteat!(eig_vec, forbidden_eig_index)
+#     correct_eigenstates = (correct_eig_val, correct_eig_vec)
+#     return correct_eigenstates
+# end
+
