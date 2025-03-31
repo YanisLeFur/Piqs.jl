@@ -276,3 +276,67 @@ end
     liouv == lindblad
 end
 
+@testset "isdicke" begin
+    N = 2
+    ensemble = Pim(N, emission=1.0, dephasing=1.0, collective_dephasing=1.0, collective_emission=1.0, collective_pumping=1.0)
+    test_dicke = [isdicke(ensemble, row, col) for col in [0, 1, 2] for row in [0, 1, 2]]
+    true_dicke = [true, true, true, false, true, false, false, false, false]
+    @test test_dicke == true_dicke
+end
+
+@testset "tau_valid" begin
+    N = 2
+    ensemble = Pim(N, emission=1.0, dephasing=1.0, collective_dephasing=1.0, collective_emission=1.0, collective_pumping=1.0)
+    test_tauvalid = [tau_valid(ensemble, row, col) for col in [0, 1, 2] for row in [0, 1, 2]]
+    true_tauvalid = [Dict("tau1" => -4.0, "tau8" => 2.0, "tau9" => 0.0),
+        Dict("tau2" => 3.0, "tau1" => -5.5, "tau6" => 0.5, "tau8" => 2.0),
+        Dict("tau2" => 3.0, "tau4" => 1.0, "tau1" => -2.0),
+        false,
+        Dict("tau3" => 1.0, "tau5" => 0.5, "tau1" => -1.5, "tau7" => 0.0),
+        false,
+        false,
+        false,
+        false]
+
+    @test test_tauvalid == true_tauvalid
+end
+
+@testset "calculate_k" begin
+
+    N = 2
+    ensemble = Pim(N, emission=1)
+    calculate_k(ensemble, 1, 1)
+    test_k = [calculate_k(ensemble, row, col) for col in [0, 1, 2, 3, 4, 5] for row in [0, 1, 2, 3, 4, 5]]
+    true_k = [0, 1, 2, 3, 4, 5, 1, 3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 7, 3, 1, 2, 3, 4, 5, 4, -3, -2, -1, 0, 1, 5, -9, -8, -7, -6, -5]
+    @test test_k == true_k
+end
+
+@testset "coefficient_matrix" begin
+    N = 2
+    ensemble = Pim(N, emission=1)
+    test_matrix = Matrix(coefficient_matrix(ensemble))
+    true_matrix = Matrix([-2 0 0 0; 1 -1 0 0; 0 1 0 1.0; 1 0 0 -1.0])
+    @test isapprox(test_matrix, true_matrix)
+end
+
+@testset "dicke_state" begin
+    dicke_test = dicke(4, 1.0, 0.0)
+    dicke_true = [0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0; 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0]
+    @test dicke_test.data == dicke_true
+end
+
+@testset "pisolve" begin
+
+    jx, jy, jz = jspin(4)
+    diag_system = Dicke(4, hamiltonian=jz, emission=0.1)
+    pim_current = Pim(4, emission=0.1, dephasing=0, pumping=0, collective_emission=0, collective_pumping=0, collective_dephasing=0)
+    diag_initial_state = dicke(4, 1.0, 0.0)
+    tlist = LinRange(0, 10, 100)
+    diag_sol = pisolve(diag_system, diag_initial_state, tlist)
+    true_diag_sol = [0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.11627208 0.0 0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0 0.3995764 0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0 0.0 0.0 0.13533528 0.0 0.0; 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.34881625 0.0; 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0]
+    @test isapprox(Matrix(diag_sol.states[end].data), true_diag_sol, atol=1e-6)
+
+    non_diag_system = Dicke(4, hamiltonian=jx, emission=0.1)
+    @test_throws ArgumentError pisolve(non_diag_system, diag_initial_state, tlist)
+
+end
