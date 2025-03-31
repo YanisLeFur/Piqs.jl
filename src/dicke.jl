@@ -1,4 +1,4 @@
-export num_dicke_states, num_dicke_ladders, num_tls, isdiagonal, get_blocks, j_vals, m_vals, get_index, jmm1_dictionary, Dicke
+export num_dicke_states, num_dicke_ladders, num_tls, isdiagonal, get_blocks, j_vals, m_vals, get_index, jmm1_dictionary, Dicke, pisolve, prune_eigenstates, c_ops, coefficient_matrix
 
 using QuantumToolbox
 
@@ -101,7 +101,7 @@ mutable struct Dicke
     N: int
         The number of two-level systems.
 
-    hamiltonian: :class: qutip.Qobj
+    hamiltonian: :QuantumObject
         A Hamiltonian in the Dicke basis.
 
         The matrix dimensions are (nds, nds), 
@@ -270,7 +270,7 @@ function get_index(N, j, m, m1, blocks)
     j, m, m1: float
         The j, m, m1 values.
 
-    blocks: np.ndarray
+    blocks: nd.ndarray
         An 1D array with the number of cumulative elements at the boundary of
         each block.
 
@@ -306,7 +306,7 @@ function jmm1_dictionary(N::Number)
     we get the block by using the "j" value and then the addition in the
     row/column due to the m and m1 is determined. Four dictionaries are
     returned giving a map from the (j, m, m1) values to (i, k), the inverse
-    map, a flattened map and the inverse of the flattened map.
+    map, a flattened map and the inverse of the flattened mad.
     """
 
     jmm1_dict::Dict = Dict()
@@ -333,3 +333,117 @@ function jmm1_dictionary(N::Number)
     return [jmm1_dict, jmm1_inv, jmm1_flat, jmm1_flat_inv]
 end
 
+
+
+function pisolve(d::Dicke, initial_state::QuantumObject, tlist)
+    """
+    Solve for diagonal Hamiltonians and initial states faster.
+
+    Parameters
+    ==========
+    initial_state: :QuantumObject
+        An initial state specified as a density matrix of `qutip.Qbj` type
+
+    tlist: Vector
+        A 1D numpy array of list of timesteps to integrate
+
+    options: :Nothing
+        The options for the solver.
+
+    Returns
+    =======
+    result: Vector
+        A dictionary of the type `QuantumToolbox.results` which holds the
+        results of the evolution.
+    """
+    if !isdiagonal(initial_state)
+        msg = "`pisolve` requires a diagonal initial density matrix. "
+        msg *= "In general, construct the Liouvillian using `piqs.liouvillian`"
+        msg *= " and use QuantumToolbox.mesolve."
+        throw(ArgumentError(msg))
+    end
+
+    if !isnothing(d.hamiltonian) && !isdiagonal(d.hamiltonian)
+        msg = "`pisolve` should only be used for diagonal Hamiltonians. "
+        msg *= "Construct the Liouvillian using `piqs.liouvillian` and use"
+        msg *= " `QuantumToolbox.mesolve`."
+        throw(ArgumentError(msg))
+    end
+
+    if size(initial_state.data) != d.dshape
+        msg = "Initial density matrix should be diagonal."
+        throw(ArgumentError(msg))
+    end
+    pim = Pim(d.N, emission=d.emission, dephasing=d.dephasing, pumping=d.pumping, collective_emission=d.collective_emission, collective_pumping=d.collective_pumping, collective_dephasing=d.collective_dephasing)
+    result = solve(pim, initial_state, tlist)
+    return result
+end
+
+function prune_eigenstates(d::Dicke, liouvillian::QuantumObject)::Vector
+    """Remove spurious eigenvalues and eigenvectors of the Liouvillian.
+
+    Spurious means that the given eigenvector has elements outside of the
+    block-diagonal matrix.
+
+    Parameters
+    ----------
+    liouvillian_eigenstates: list
+        A list with the eigenvalues and eigenvectors of the Liouvillian
+        including spurious ones.
+
+    Returns
+    -------
+    correct_eigenstates: list
+        The list with the correct eigenvalues and eigenvectors of the
+        Liouvillian.
+    """
+    eig_val, eig_vec = eigenstates(liouvillian)
+    N = d.N
+    block_mat = block_matrix(N)
+    nnz_tuple_bm = [(i, j) for (i, j) in zip(findall(!iszero, block_mat))]
+
+    forbidden_eig_index = []
+    for k in 1:length(eig_val)
+        dm = vec2mat(eig_vec[k])
+        nnz_tuple = [(i, j) for (i, j) in zip(findall(!iszero, dm.data))]
+        for i in nnz_tuple
+            if i
+                not in nnz_tuple_bm
+                if nd.round(dm[i], tol) != 0
+                    forbidden_eig_index.append(k)
+                end
+            end
+        end
+    end
+
+
+    forbidden_eig_index = unique(forbidden_eig_index)
+    correct_eig_val = deleteat!(eig_val, forbidden_eig_index)
+    correct_eig_vec = deleteat!(eig_vec, forbidden_eig_index)
+    correct_eigenstates = (correct_eig_val, correct_eig_vec)
+    return correct_eigenstates
+end
+
+function c_ops(d::Dicke)::Vector
+    """Build collapse operators in the full Hilbert space 2^N.
+
+    Returns
+    -------
+    c_ops_list: Vector
+        The list with the collapse operators in the 2^N Hilbert space.
+    """
+    return collapse_uncoupled(N=d.N, emission=d.emission, dephasing=d.dephasing, pumping=d.pumping, collective_emission=d.collective_emission, collective_dephasing=d.collective_dephasing, collective_pumping=d.collective_pumping)
+end
+
+function coefficient_matrix(d::Dicke)
+    """Build coefficient matrix for ODE for a diagonal problem.
+
+    Returns
+    -------
+    M: Matrix
+        The matrix M of the coefficients for the ODE dp/dt = M d.
+        p is the vector of the diagonal matrix elements
+        of the density matrix rho in the Dicke basis.  
+    """
+    return coefficient_matrix(Pim(N=d.N, emission=d.emission, dephasing=d.dephasing, pumping=d.pumping, collective_emission=d.collective_emission, collective_dephasing=d.collective_dephasing, collective_pumping=d.collective_pumping))
+end
