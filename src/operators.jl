@@ -70,7 +70,7 @@ end
 
 ## TO WORK on
 
-function energy_degeneracy(N::Integer, m::AbstractFloat)::Integer
+function energy_degeneracy(N::Integer, m::Number)::Integer
     """Calculate the number of Dicke states with same energy.
 
     The use of the `Decimals` class allows to explore N > 1000,
@@ -81,7 +81,7 @@ function energy_degeneracy(N::Integer, m::AbstractFloat)::Integer
     N: Integer
         The number of two-level systems.
 
-    m: AbstractFloat
+    m: Number
         Total spin z-axis projection eigenvalue.
         This is proportional to the total energy.
 
@@ -90,14 +90,14 @@ function energy_degeneracy(N::Integer, m::AbstractFloat)::Integer
     degeneracy: Integer
         The energy degeneracy
     """
-    numerator = big(factorial(N))
-    d1 = big(factorial(N ÷ 2 + m))
-    d2 = big(factorial(N ÷ 2 - m))
+    numerator = factorial(BigFloat(N))
+    d1 = factorial(BigFloat(N / 2 + m))
+    d2 = factorial(BigFloat(N / 2 - m))
     degeneracy = numerator / (d1 * d2)
     return trunc(Int, degeneracy)
 end
 
-function state_degeneracy(N::Number, j::AbstractFloat)::Integer
+function state_degeneracy(N::Integer, j::Number)::Integer
     """Calculate the degeneracy of the Dicke state.
 
     Each state :math:`|j, m\\rangle` includes D(N,j) irreducible
@@ -121,9 +121,9 @@ function state_degeneracy(N::Number, j::AbstractFloat)::Integer
     if j < 0
         throw(DomainError("j value should be >= 0"))
     end
-    numerator = big(factorial(N)) * big(2 * j + 1)
-    denominator_1 = big(factorial(N / 2 + j + 1))
-    denominator_2 = big(factorial(N / 2 - j))
+    numerator = factorial(big(N)) * big(2 * j + 1)
+    denominator_1 = (factorial(big(N / 2 + j + 1)))
+    denominator_2 = (factorial(big(N / 2 - j)))
     degeneracy = numerator / (denominator_1 * denominator_2)
     degeneracy = trunc(Int, round(float(degeneracy)))
     return degeneracy
@@ -131,7 +131,7 @@ end
 
 
 
-function m_degeneracy(N::Integer, m::AbstractFloat)::Integer
+function m_degeneracy(N::Integer, m::Number)::Integer
     """Calculate the number of Dicke states :math:`|j, m\\rangle` with
     same energy.
 
