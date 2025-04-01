@@ -343,3 +343,55 @@ end
 
 end
 
+@testset "energy_degeneracy" begin
+    true_en_deg = [1, 1, 1, 1, 1]
+    true_en_deg_even = [2, 6, 20]
+    true_en_deg_odd = [1, 1, 3, 3, 35, 35]
+    test_en_deg = []
+    test_en_deg_even = []
+    test_en_deg_odd = []
+
+    for nn in [1, 2, 3, 4, 7]
+        push!(test_en_deg, energy_degeneracy(nn, nn / 2))
+    end
+
+    for nn in [2, 4, 6]
+        push!(test_en_deg_even, energy_degeneracy(nn, 0))
+    end
+
+    for nn in [1, 3, 7]
+        push!(test_en_deg_odd, energy_degeneracy(nn, 1 / 2))
+        push!(test_en_deg_odd, energy_degeneracy(nn, -1 / 2))
+    end
+
+    @test test_en_deg == true_en_deg
+    @test test_en_deg_even == true_en_deg_even
+    @test test_en_deg_odd == true_en_deg_odd
+end
+
+@testset "state_degeneracy" begin
+
+    true_state_deg = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 14, 14, 42, 42]
+    state_deg = []
+    state_deg = []
+    for nn in [1, 2, 3, 4, 7, 8, 9, 10]
+        push!(state_deg, state_degeneracy(nn, nn / 2))
+    end
+    for nn in [1, 2, 3, 4, 7, 8, 9, 10]
+        push!(state_deg, state_degeneracy(nn, (nn / 2) % 1))
+    end
+    @test state_deg == true_state_deg
+    @test_throws DomainError state_degeneracy(2, -1)
+end
+
+@testset "m_degeneracy" begin
+
+
+    true_m_deg = [1, 2, 2, 3, 4, 5, 5, 6]
+    m_deg = []
+    for nn in [1, 2, 3, 4, 7, 8, 9, 10]
+        push!(m_deg, m_degeneracy(nn, -(nn / 2) % 1))
+    end
+    @test m_deg == true_m_deg
+    @test_throws DomainError m_degeneracy(6, -6)
+end
