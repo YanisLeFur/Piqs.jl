@@ -203,7 +203,7 @@ function am(j::AbstractFloat, m::AbstractFloat)::AbstractFloat
     return sqrt((j + m) * (j - m + 1))
 end
 
-function spin_algebra(N::Integer, op::Union{String,Nothing}=nothing)::Vector{QuantumObject}
+function spin_algebra(N::Integer, op::Union{String,Nothing}=nothing)
     """Create the list [sx, sy, sz] with the spin operators.
 
     The operators are constructed for a collection of N two-level systems
@@ -227,50 +227,25 @@ function spin_algebra(N::Integer, op::Union{String,Nothing}=nothing)::Vector{Qua
         A list of `qutip.Qobj` operators - [sx, sy, sz] or the
         requested operator.
     """
-    # 1. Define N TLS spin-1/2 matrices in the uncoupled basis
-    sx = [0.5 * sigmax()]
-    sy = [0.5 * sigmay()]
-    sz = [0.5 * sigmaz()]
-    sp = [sigmap()]
-    sm = [sigmam()]
-
-    # 2. Place operators in total Hilbert space
-    for _ in 2:N
-        sx[1] = kron(sx[1], eye(2))
-        sy[1] = kron(sy[1], eye(2))
-        sz[1] = kron(sz[1], eye(2))
-        sp[1] = kron(sp[1], eye(2))
-        sm[1] = kron(sm[1], eye(2))
-    end
-
-    # 3. Cyclic sequence to create all N operators
-    a = [i for i in 1:N-1]
-    b = [[a[i-i2] for i in 1:N-1] for i2 in 1:N-1]
-
-    # 4. Create N operators
-    for i in 2:N
-        push!(sx[i], permute(sx[1], b[i]))
-        push!(sy[i], permute(sy[1], b[i]))
-        push!(sz[i], permute(sz[1], b[i]))
-        push!(sp[i], permute(sp[1], b[i]))
-        push!(sm[i], permute(sm[1], b[i]))
-    end
-
-
+    ops = Dict(
+        "x" => 0.5 * sigmax(),
+        "y" => 0.5 * sigmay(),
+        "z" => 0.5 * sigmaz(),
+        "+" => sigmap(),
+        "-" => sigmam()
+    )
     if isnothing(op)
-        return [sx, sy, sz]
+        return [ops["x"], ops["y"], ops["z"]] .|> (op -> [multisite_operator(N, i => op) for i in 1:N])
     end
 
-    return op == "x" ? jx :
-           op == "y" ? jy :
-           op == "z" ? jz :
-           op == "+" ? jp :
-           op == "-" ? jm :
-           throw(TypeError("Invalid operator type: $op"))
+    if !haskey(ops, op)
+        throw(DomainError("Invalid operator type: $op"))
+    end
+    return [multisite_operator(N, i => ops[op]) for i in 1:N]
 end
 
 
-function _jspin_uncoupled(N::Integer, op::Union{String,Nothing}=nothing)::Union{QuantumObject,Vector{QuantumObject}}
+function _jspin_uncoupled(N::Integer, op::Union{String,Nothing}=nothing)
     """
     Construct the collective spin algebra in the uncoupled basis.
 
@@ -322,7 +297,7 @@ function _jspin_uncoupled(N::Integer, op::Union{String,Nothing}=nothing)::Union{
 end
 
 
-function jspin(N::Integer, op::Union{String,Nothing}=nothing, basis::String="dicke")::Union{QuantumObject,Vector}
+function jspin(N::Integer; op::Union{String,Nothing}=nothing, basis::String="dicke")
     """
     Calculate the list of collective operators of the total algebra.
 
@@ -394,13 +369,13 @@ function jspin(N::Integer, op::Union{String,Nothing}=nothing, basis::String="dic
            op == "z" ? jz :
            op == "+" ? jp :
            op == "-" ? jm :
-           throw(TypeError("Invalid operator type: $op"))
+           throw(DomainError("Invalid operator type: $op"))
 end
 
 
-function collapse_uncoupled(N::Integer; emission::AbstractFloat=0.0, dephasing::AbstractFloat=0.0, pumping::AbstractFloat=0.0,
-    collective_emission::AbstractFloat=0.0, collective_dephasing::AbstractFloat=0.0,
-    collective_pumping::AbstractFloat=0.0)::Vector
+function collapse_uncoupled(N::Integer; emission::Union{AbstractFloat,Integer}=0.0, dephasing::Union{AbstractFloat,Integer}=0.0, pumping::Union{AbstractFloat,Integer}=0.0,
+    collective_emission::Union{AbstractFloat,Integer}=0.0, collective_dephasing::Union{AbstractFloat,Integer}=0.0,
+    collective_pumping::Union{AbstractFloat,Integer}=0.0)
     """
     Create the collapse operators (c_ops) of the Lindbladian in the uncoupled basis.
 
@@ -454,11 +429,11 @@ function collapse_uncoupled(N::Integer; emission::AbstractFloat=0.0, dephasing::
         @warn "N > 10. dim(H) = 2^N. Better use `piqs.lindbladian` to reduce Hilbert space dimension and exploit permutational symmetry."
     end
 
-    sx, sy, sz = spin_algebra(N)
+    sz = spin_algebra(N)[3]
     sp, sm = spin_algebra(N, "+"), spin_algebra(N, "-")
-    jx, jy, jz = jspin(N, basis="uncoupled")
-    jp, jm = (jspin(N, "+", basis="uncoupled"),
-        jspin(N, "-", basis="uncoupled"))
+    jz = jspin(N, basis="uncoupled")[3]
+    jp, jm = (jspin(N, op="+", basis="uncoupled"),
+        jspin(N, op="-", basis="uncoupled"))
     c_ops = []
 
     for (coeff, op_list) in [(emission, sm), (dephasing, sz), (pumping, sp)]
