@@ -416,7 +416,7 @@ function c_ops(d::Dicke)::Vector
     c_ops_list: Vector
         The list with the collapse operators in the 2^N Hilbert space.
     """
-    return collapse_uncoupled(N=d.N, emission=d.emission, dephasing=d.dephasing, pumping=d.pumping, collective_emission=d.collective_emission, collective_dephasing=d.collective_dephasing, collective_pumping=d.collective_pumping)
+    return collapse_uncoupled(d.N, emission=d.emission, dephasing=d.dephasing, pumping=d.pumping, collective_emission=d.collective_emission, collective_dephasing=d.collective_dephasing, collective_pumping=d.collective_pumping)
 end
 
 function coefficient_matrix(d::Dicke)
