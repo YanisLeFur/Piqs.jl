@@ -386,7 +386,6 @@ end
 
 @testset "m_degeneracy" begin
 
-
     true_m_deg = [1, 2, 2, 3, 4, 5, 5, 6]
     m_deg = []
     for nn in [1, 2, 3, 4, 7, 8, 9, 10]
@@ -394,4 +393,89 @@ end
     end
     @test m_deg == true_m_deg
     @test_throws DomainError m_degeneracy(6, -6)
+end
+
+@testset "spin_algebra" begin
+    sx1 = [0.0+0im 0.0+0im 0.5+0im 0.0+0im;
+        0.0+0im 0.0+0im 0.0+0im 0.5+0im;
+        0.5+0im 0.0+0im 0.0+0im 0.0+0im;
+        0.0+0im 0.5+0im 0.0+0im 0.0+0im]
+
+    sx2 = [0.0+0im 0.5+0im 0.0+0im 0.0+0im;
+        0.5+0im 0.0+0im 0.0+0im 0.0+0im;
+        0.0+0im 0.0+0im 0.0+0im 0.5+0im;
+        0.0+0im 0.0+0im 0.5+0im 0.0+0im]
+
+    sy1 = [0.0+0im 0.0+0im 0.0-0.5im 0.0+0im;
+        0.0+0im 0.0+0im 0.0+0im 0.0-0.5im;
+        0.0+0.5im 0.0+0im 0.0+0im 0.0+0im;
+        0.0+0im 0.0+0.5im 0.0+0im 0.0+0im]
+
+    sy2 = [0.0+0im 0.0-0.5im 0.0+0im 0.0+0im;
+        0.0+0.5im 0.0+0im 0.0+0im 0.0+0im;
+        0.0+0im 0.0+0im 0.0+0im 0.0-0.5im;
+        0.0+0im 0.0+0im 0.0+0.5im 0.0+0im]
+
+    sz1 = [0.5+0im 0.0+0im 0.0+0im 0.0+0im;
+        0.0+0im 0.5+0im 0.0+0im 0.0+0im;
+        0.0+0im 0.0+0im -0.5+0im 0.0+0im;
+        0.0+0im 0.0+0im 0.0+0im -0.5+0im]
+
+    sz2 = [0.5+0im 0.0+0im 0.0+0im 0.0+0im;
+        0.0+0im -0.5+0im 0.0+0im 0.0+0im;
+        0.0+0im 0.0+0im 0.5+0im 0.0+0im;
+        0.0+0im 0.0+0im 0.0+0im -0.5+0im]
+
+    sp1 = [0.0+0im 0.0+0im 1.0+0im 0.0+0im;
+        0.0+0im 0.0+0im 0.0+0im 1.0+0im;
+        0.0+0im 0.0+0im 0.0+0im 0.0+0im;
+        0.0+0im 0.0+0im 0.0+0im 0.0+0im]
+
+    sp2 = [0.0+0im 1.0+0im 0.0+0im 0.0+0im;
+        0.0+0im 0.0+0im 0.0+0im 0.0+0im;
+        0.0+0im 0.0+0im 0.0+0im 1.0+0im;
+        0.0+0im 0.0+0im 0.0+0im 0.0+0im]
+
+    sm1 = [0.0+0im 0.0+0im 0.0+0im 0.0+0im;
+        0.0+0im 0.0+0im 0.0+0im 0.0+0im;
+        1.0+0im 0.0+0im 0.0+0im 0.0+0im;
+        0.0+0im 1.0+0im 0.0+0im 0.0+0im]
+
+    sm2 = [0.0+0im 0.0+0im 0.0+0im 0.0+0im;
+        1.0+0im 0.0+0im 0.0+0im 0.0+0im;
+        0.0+0im 0.0+0im 0.0+0im 0.0+0im;
+        0.0+0im 0.0+0im 1.0+0im 0.0+0im]
+
+    @test spin_algebra(2, "x")[1].data == sx1
+    @test spin_algebra(2, "x")[2].data == sx2
+    @test spin_algebra(2, "y")[1].data == sy1
+    @test spin_algebra(2, "y")[2].data == sy2
+    @test spin_algebra(2, "z")[1].data == sz1
+    @test spin_algebra(2, "z")[2].data == sz2
+    @test spin_algebra(2, "+")[1].data == sp1
+    @test spin_algebra(2, "+")[2].data == sp2
+    @test spin_algebra(2, "-")[1].data == sm1
+    @test spin_algebra(2, "-")[2].data == sm2
+
+    @test_throws DomainError spin_algebra(2, "q")
+
+end
+c1 = Qobj([0 0 0 0; 0 0 0 0; 1 0 0 0;
+        0 1 0 0], dims=(2, 2))
+c2 = Qobj([0 0 0 0; 1 0 0 0; 0 0 0 0;
+        0 0 1 0], dims=(2, 2))
+true_c_ops = [c1, c2]
+collapse_uncoupled(2, emission=1)
+
+
+@testset "collapse_uncoupled" begin
+
+    c1 = Qobj([0 0 0 0; 0 0 0 0; 1 0 0 0;
+            0 1 0 0], dims=(2, 2))
+    c2 = Qobj([0 0 0 0; 1 0 0 0; 0 0 0 0;
+            0 0 1 0], dims=(2, 2))
+    true_c_ops = [c1, c2]
+    @test true_c_ops == collapse_uncoupled(2, emission=1)
+    system = Dicke(2, emission=1)
+    @test (true_c_ops == c_ops(system))
 end
