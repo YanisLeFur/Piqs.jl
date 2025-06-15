@@ -479,3 +479,24 @@ collapse_uncoupled(2, emission=1)
     system = Dicke(2, emission=1)
     @test (true_c_ops == c_ops(system))
 end
+
+@testset "dicke_basis" begin
+    N = 2
+    true_dicke_basis = zeros((4, 4))
+    true_dicke_basis[2, 2] = 0.5
+    true_dicke_basis[end, end] = 0.5
+    true_dicke_basis[1, 3] = 0.3
+    true_dicke_basis[3, 1] = 0.3
+    true_dicke_basis = Qobj(true_dicke_basis)
+    jmm1_1 = Dict((N / 2, 0, 0) => 0.5)
+    jmm1_2 = Dict((0, 0, 0) => 0.5)
+    jmm1_3 = Dict((N / 2, N / 2, N / 2 - 2) => 0.3)
+    jmm1_4 = Dict((N / 2, N / 2 - 2, N / 2) => 0.3)
+    db1 = dicke_basis(2, jmm1_1)
+    db2 = dicke_basis(2, jmm1_2)
+    db3 = dicke_basis(2, jmm1_3)
+    db4 = dicke_basis(2, jmm1_4)
+    test_dicke_basis = db1 + db2 + db3 + db4
+    @test (test_dicke_basis == true_dicke_basis)
+    @test_throws ArgumentError dicke_basis(N, Dict())
+end
