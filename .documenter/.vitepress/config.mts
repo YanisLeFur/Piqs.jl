@@ -92,9 +92,9 @@ export default defineConfig({
 { text: 'Home', link: '/index' }
 ]
 ,
-    editLink: { pattern: "https://github.com/YanisLeFur/Piqs.jl/edit/main/docs/src/:path" },
+    editLink: { pattern: "https://httpsgithub.com/YanisLeFur/Piqs.jl/edit/main/docs/src/:path" },
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/YanisLeFur/Piqs.jl' }
+      { icon: 'github', link: 'https://httpsgithub.com/YanisLeFur/Piqs.jl' }
     ],
     footer: {
       message: 'Made with <a href="https://luxdl.github.io/DocumenterVitepress.jl/dev/" target="_blank"><strong>DocumenterVitepress.jl</strong></a><br>',
