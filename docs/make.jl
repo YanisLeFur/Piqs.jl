@@ -1,27 +1,18 @@
-using Pkg
-Pkg.activate(@__DIR__)
-Pkg.instantiate()
-
 using Documenter
 using DocumenterVitepress
-using Piqs
-
-const PAGES = ["Home" => "index.md"]
 
 makedocs(;
-    modules=[
-        QuantumToolbox,
-        Base.get_extension(QuantumToolbox, :QuantumToolboxMakieExt),
-    ],
-    authors="Yanis Le Fur",
-    repo=Remotes.GitHub("Piqs.jl"),
-    sitename="Piqs.jl",
-    pages=PAGES,
     format=DocumenterVitepress.MarkdownVitepress(
         repo="github.com/YanisLeFur/Piqs.jl",
         devbranch="main",
         devurl="dev",
     ),
+    sitename="Piqs.jl",
+    authors="Yanis Le Fur",
+    modules=[Piqs],
+    pages=[
+        "Home" => "index.md",
+    ],
 )
 
 

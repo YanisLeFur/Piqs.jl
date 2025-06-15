@@ -15,33 +15,15 @@ jobs:
       - name: Set up Julia
         uses: julia-actions/setup-julia@v1
         with:
-          version: '1.11'
+          version: '1.11'  # Or your preferred version
 
       - name: Install dependencies
         run: |
           julia --project=docs -e '
             using Pkg
-            Pkg.develop(path = ".")
+            Pkg.develop(path=".")
             Pkg.instantiate()
           '
 
-      - name: Build docs (Julia)
+      - name: Build and deploy docs
         run: julia --project=docs docs/make.jl
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-
-      - name: Build VitePress site
-        working-directory: docs/build
-        run: |
-          npm install -g vitepress
-          vitepress build
-
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: docs/build/.vitepress/dist
-          publish_branch: gh-pages
