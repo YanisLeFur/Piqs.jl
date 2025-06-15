@@ -8,7 +8,7 @@ makedocs(;
     sitename="Piqs.jl",
     repo=Remotes.GitHub("https://github.com/YanisLeFur/Piqs.jl"),
     format=DocumenterVitepress.MarkdownVitepress(
-        repo="github.com/YanisLeFur/Piqs.jl",
+        repo="httpsgithub.com/YanisLeFur/Piqs.jl",
         devbranch="main",
         devurl="dev",
     ),
@@ -21,7 +21,7 @@ makedocs(;
 )
 
 DocumenterVitepress.deploydocs(;
-    repo="github.com/YanisLeFur/Piqs.jl",
+    repo="https://github.com/YanisLeFur/Piqs.jl",
     target=joinpath(@__DIR__, "build"),
     devbranch="main",
     branch="gh-pages",
