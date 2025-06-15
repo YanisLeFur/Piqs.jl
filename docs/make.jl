@@ -1,5 +1,6 @@
 using Documenter
 using DocumenterVitepress
+using Piqs
 
 makedocs(;
     format=DocumenterVitepress.MarkdownVitepress(
