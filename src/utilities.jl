@@ -1,5 +1,5 @@
 using QuantumToolbox
-export super_tensor, compute_order, permute_dimensions
+export super_tensor
 
 function permute_dimensions(matrix, dimensions, order)
     reshape_factor = (dimensions..., dimensions...)
