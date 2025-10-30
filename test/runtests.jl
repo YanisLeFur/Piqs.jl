@@ -2,6 +2,9 @@ using Piqs
 using Test
 using QuantumToolbox
 
+include("test_tensor.jl")
+
+
 @testset "num_dicke_states" begin
     @test num_dicke_states(2) == 4
     @test num_dicke_states(143) == 5256
