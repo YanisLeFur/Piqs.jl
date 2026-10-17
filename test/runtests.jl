@@ -1,6 +1,8 @@
 using Piqs
 using Test
 using QuantumToolbox
+using LinearAlgebra
+using SparseArrays
 
 include("test_tensor.jl")
 
@@ -217,7 +219,7 @@ end
     system = Dicke(N, emission=gE, pumping=gP, dephasing=gD, collective_emission=gCE, collective_pumping=gCP, collective_dephasing=gCD)
     lindbladian_result = lindbladian(system)
     Ldata = [-0.6 0 0 0.6; 0 -0.9 0 0; 0 0 -0.9 0; 0.6 0 0 -0.6]
-    lindbladian_correct = Qobj(sparse(Ldata), dims=(2), type=SuperOperator)
+    lindbladian_correct = Qobj(sparse(Ldata), type=SuperOperator())
     @test isapprox(lindbladian_result, lindbladian_correct)
 
 
@@ -248,7 +250,7 @@ end
         0.05,
         0.1,
         -0.25)
-    lindbladian_correct = Qobj(sparse(Ldata), dims=(4), type=SuperOperator)
+    lindbladian_correct = Qobj(sparse(Ldata), type=SuperOperator())
     @test isapprox(lindbladian_correct, lindbladian_result)
 end
 
@@ -256,12 +258,12 @@ end
 @testset "liouvillian" begin
 
     true_L = [-4 0 0 3; 0 -3.54999995 0 0; 0 0 -3.54999995 0; 4 0 0 -3]
-    true_L = Qobj(true_L, dims=(2), type=SuperOperator)
+    true_L = Qobj(true_L, type=SuperOperator())
     true_H = [1.0+0im 1.0+0im; 1.0+0im -1.0+0im]
     true_H = Qobj(true_H, dims=(2))
 
     true_liouvillian = [-4 -1im 1im 3; -1im -3.54999995+2im 0 1im; 1im 0 -3.54999995-2im -1im; 4 +1im -1im -3]
-    true_liouvillian = Qobj(true_liouvillian, dims=(2), type=SuperOperator)
+    true_liouvillian = Qobj(true_liouvillian, type=SuperOperator())
     N = 1
     test_piqs = Dicke(1, hamiltonian=sigmaz() + sigmax(),
         pumping=1, collective_pumping=2, emission=1,
@@ -550,7 +552,7 @@ end
     L_sum = super_tensor((L1, id2)) + super_tensor((id1, L2))
     L_ref = liouvillian(tensor(H1, qeye(d2)) + tensor(qeye(d1), H2),
         [sqrt(0.3) * tensor(a, qeye(d2)), sqrt(0.7) * tensor(qeye(d1), b)])
-    @test L_sum.dims == [d1, d2]
+    @test L_sum.dimensions == L_ref.dimensions
     @test size(L_sum) == ((d1 * d2)^2, (d1 * d2)^2)
     @test isapprox(Matrix(L_sum.data), Matrix(L_ref.data))
 
@@ -558,7 +560,7 @@ end
     Ls = (L1, L2, L3)
     ρs = [rand_dm(d1), rand_dm(d2), rand_dm(d3)]
     S = super_tensor(Ls)
-    @test S.dims == [d1, d2, d3]
+    @test S.dims[1][1] == [d1, d2, d3]
     lhs = vector_to_operator(S * operator_to_vector(tensor(ρs...)))
     rhs = tensor([vector_to_operator(L * operator_to_vector(ρ)) for (L, ρ) in zip(Ls, ρs)]...)
     @test isapprox(lhs.data, rhs.data)
