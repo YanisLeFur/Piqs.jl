@@ -11,8 +11,12 @@ makedocs(;
     sitename="Piqs.jl",
     authors="Yanis Le Fur",
     modules=[Piqs],
+    checkdocs=:exports,
     pages=[
         "Home" => "index.md",
+        "Getting started" => "getting_started.md",
+        "Examples" => "examples.md",
+        "API reference" => "api.md",
     ],
 )
 
