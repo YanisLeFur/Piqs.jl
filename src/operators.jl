@@ -277,7 +277,7 @@ function _jspin_uncoupled(N::Integer, op::Union{String,Nothing}=nothing)
            op == "z" ? jz :
            op == "+" ? jp :
            op == "-" ? jm :
-           throw(TypeError("Invalid operator type: $op"))
+           throw(DomainError("Invalid operator type: $op"))
 end
 
 

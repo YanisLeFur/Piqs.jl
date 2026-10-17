@@ -565,3 +565,236 @@ end
     rhs = tensor([vector_to_operator(L * operator_to_vector(ρ)) for (L, ρ) in zip(Ls, ρs)]...)
     @test isapprox(lhs.data, rhs.data)
 end
+
+@testset "Dicke show" begin
+    system = Dicke(2, emission=1, dephasing=2, pumping=3, collective_emission=4,
+        collective_dephasing=5, collective_pumping=6)
+    out = repr(system)
+    @test occursin("N = 2", out)
+    @test occursin("Hilbert space dim = (4, 4)", out)
+    @test occursin("Number of Dicke states = 4", out)
+    @test occursin("Liouvillian space dim = (16, 16)", out)
+    for rate in ["emission = 1", "dephasing = 2", "pumping = 3", "collective_emission = 4",
+        "collective_dephasing = 5", "collective_pumping = 6"]
+        @test occursin(rate, out)
+    end
+
+    # vanishing rates are not printed
+    out = repr(Dicke(1))
+    @test !occursin("emission", out)
+    @test !occursin("dephasing", out)
+    @test !occursin("pumping", out)
+end
+
+@testset "block_matrix" begin
+    @test PIQSolver.block_matrix(1) == ones(Int, 2, 2)
+    @test PIQSolver.block_matrix(2) == [1 1 1 0; 1 1 1 0; 1 1 1 0; 0 0 0 1]
+    @test PIQSolver.block_matrix(3) == [1 1 1 1 0 0; 1 1 1 1 0 0; 1 1 1 1 0 0; 1 1 1 1 0 0;
+        0 0 0 0 1 1; 0 0 0 0 1 1]
+    for N in 1:8
+        bm = PIQSolver.block_matrix(N)
+        @test size(bm) == (num_dicke_states(N), num_dicke_states(N))
+        # the Liouvillian only couples elements inside the blocks
+        L = lindbladian(Dicke(N, emission=1, dephasing=1, pumping=1, collective_emission=1))
+        rows, cols, _ = findnz(L.data)
+        @test all(bm[mod(r - 1, size(bm, 1))+1, div(r - 1, size(bm, 1))+1] == 1 for r in rows)
+    end
+end
+
+@testset "j_min" begin
+    @test PIQSolver.j_min(4) == 0
+    @test PIQSolver.j_min(5) == 0.5
+end
+
+@testset "coefficient_matrix Dicke" begin
+    rates = (emission=0.3, dephasing=0.2, pumping=0.1, collective_emission=0.5,
+        collective_dephasing=0.4, collective_pumping=0.25)
+    for N in [2, 3]
+        @test coefficient_matrix(Dicke(N; rates...)) == coefficient_matrix(Pim(N; rates...))
+    end
+    @test isapprox(Matrix(coefficient_matrix(Dicke(2, emission=1))),
+        [-2 0 0 0; 1 -1 0 0; 0 1 0 1.0; 1 0 0 -1.0])
+end
+
+@testset "Pim odd N" begin
+    ensemble = Pim(3, emission=1.0, pumping=0.5, dephasing=0.3)
+    test_dicke = [isdicke(ensemble, row, col) for row in 0:3, col in 0:2]
+    @test test_dicke == Bool[1 0 0; 1 1 0; 1 1 0; 1 0 0]
+    @test isdicke(ensemble, -1, 0) == false
+    @test isdicke(ensemble, 0, 3) == false
+    @test tau_valid(ensemble, 0, 2) == false
+end
+
+@testset "Pim trace preservation" begin
+    for N in 1:6
+        ensemble = Pim(N, emission=0.3, dephasing=0.2, pumping=0.1, collective_emission=0.5,
+            collective_pumping=0.25)
+        M = Matrix(coefficient_matrix(ensemble))
+        @test size(M) == (num_dicke_states(N), num_dicke_states(N))
+        @test all(abs.(sum(M, dims=1)) .< 1e-12)
+    end
+end
+
+@testset "calculate_j_m and tau_column" begin
+    ensemble = Pim(4)
+    @test calculate_j_m(ensemble, 0, 0) == (2.0, 2.0)
+    @test calculate_j_m(ensemble, 3, 1) == (1.0, -1.0)
+    j = 1.0
+    k = 6
+    expected = Dict("tau1" => k, "tau2" => k - 1, "tau3" => k - 5, "tau4" => k + 1,
+        "tau5" => k - 4, "tau6" => k + 2, "tau7" => k - 3, "tau8" => k + 1, "tau9" => k + 3)
+    for (tau, col) in expected
+        @test tau_column(tau, k, j) == col
+    end
+end
+
+@testset "tau functions" begin
+    # with all rates equal to zero, every tau vanishes
+    ensemble = Pim(4)
+    for tau in [tau1, tau2, tau3, tau4, tau5, tau6, tau7, tau8, tau9]
+        @test tau(ensemble, 1.0, 0.0) == 0
+    end
+    ensemble = Pim(2, dephasing=1.0)
+    @test tau1(ensemble, 0, 0) == -0.5
+end
+
+@testset "pisolve odd N and all rates" begin
+    rates = (emission=0.3, dephasing=0.2, pumping=0.1, collective_emission=0.5,
+        collective_dephasing=0.4, collective_pumping=0.25)
+    tlist = LinRange(0, 3, 31)
+    for N in [3, 4]
+        system = Dicke(N; hamiltonian=jspin(N, op="z"), rates...)
+        rho0 = dicke(N, N / 2, N / 2)
+        pi_sol = pisolve(system, rho0, tlist)
+        me_sol = mesolve(liouvillian_dicke(system), rho0, tlist, progress_bar=Val(false))
+        @test length(pi_sol.states) == length(tlist)
+        @test isapprox(real.(diag(Matrix(pi_sol.states[end].data))),
+            real.(diag(Matrix(me_sol.states[end].data))), atol=1e-5)
+        @test isapprox(tr(pi_sol.states[end]), 1.0, atol=1e-6)
+    end
+
+    # without Hamiltonian
+    system = Dicke(2, emission=1.0)
+    sol = pisolve(system, dicke(2, 1.0, 1.0), tlist)
+    @test isapprox(real(sol.states[end][1, 1]), exp(-2 * tlist[end]), atol=1e-5)
+end
+
+@testset "pisolve errors" begin
+    tlist = LinRange(0, 1, 5)
+    system = Dicke(2, emission=1.0)
+    non_diag_state = dicke_basis(2, Dict((1.0, 1.0, 1.0) => 0.5, (1.0, 0.0, 0.0) => 0.5,
+        (1.0, 1.0, 0.0) => 0.1, (1.0, 0.0, 1.0) => 0.1))
+    @test_throws ArgumentError pisolve(system, non_diag_state, tlist)
+    # diagonal initial state with the wrong dimension
+    @test_throws ArgumentError pisolve(system, dicke(3, 1.5, 1.5), tlist)
+end
+
+@testset "ap and am" begin
+    @test ap(1.0, 0.0) ≈ sqrt(2)
+    @test am(1.0, 0.0) ≈ sqrt(2)
+    @test ap(1.0, 1.0) == 0.0
+    @test am(1.0, -1.0) == 0.0
+    @test ap(0.5, -0.5) ≈ 1.0
+    @test am(1.5, 0.5) ≈ 2.0
+end
+
+@testset "jspin dicke basis" begin
+    for N in [1, 2, 3, 4]
+        jx, jy, jz = jspin(N)
+        jp, jm = jspin(N, op="+"), jspin(N, op="-")
+        @test jspin(N, op="x") == jx
+        @test jspin(N, op="y") == jy
+        @test jspin(N, op="z") == jz
+        @test isapprox(jp, jx + 1im * jy)
+        @test isapprox(jm, jx - 1im * jy)
+        @test isapprox(jm, jp')
+        @test isdiagonal(jz)
+        # angular momentum algebra
+        @test isapprox(jx * jy - jy * jx, 1im * jz)
+        @test isapprox(jz * jp - jp * jz, jp)
+        # Casimir operator: J^2 = j(j+1) in each block
+        j2 = jx^2 + jy^2 + jz^2
+        expected = vcat([fill(j * (j + 1), Int(2j + 1)) for j in reverse(j_vals(N))]...)
+        @test isapprox(Matrix(j2.data), diagm(expected), atol=1e-12)
+    end
+    @test_throws DomainError jspin(2, op="q")
+end
+
+@testset "jspin uncoupled basis" begin
+    N = 3
+    jx, jy, jz = jspin(N, basis="uncoupled")
+    @test jspin(N, op="x", basis="uncoupled") == jx
+    @test jspin(N, op="y", basis="uncoupled") == jy
+    @test jspin(N, op="z", basis="uncoupled") == jz
+    @test jx == sum(spin_algebra(N, "x"))
+    @test jy == sum(spin_algebra(N, "y"))
+    @test jz == sum(spin_algebra(N, "z"))
+    @test jspin(N, op="+", basis="uncoupled") == sum(spin_algebra(N, "+"))
+    @test jspin(N, op="-", basis="uncoupled") == sum(spin_algebra(N, "-"))
+    @test size(jx) == (2^N, 2^N)
+    # the spectrum of jz in the uncoupled basis contains the dicke values with degeneracies
+    vals = round.(real.(eigvals(Matrix(jz.data))), digits=10)
+    for m in m_vals(N / 2)
+        @test count(==(m), vals) == energy_degeneracy(N, m)
+    end
+    @test_throws DomainError jspin(2, op="q", basis="uncoupled")
+end
+
+@testset "spin_algebra default" begin
+    sx, sy, sz = spin_algebra(2)
+    @test sx == spin_algebra(2, "x")
+    @test sy == spin_algebra(2, "y")
+    @test sz == spin_algebra(2, "z")
+end
+
+@testset "collapse_uncoupled all rates" begin
+    N = 2
+    g = (emission=0.3, dephasing=0.2, pumping=0.1, collective_emission=0.5,
+        collective_dephasing=0.4, collective_pumping=0.25)
+    ops = collapse_uncoupled(N; g...)
+    @test length(ops) == 3 * N + 3
+    @test ops[1:N] == [sqrt(g.emission) * op for op in spin_algebra(N, "-")]
+    @test ops[N+1:2N] == [sqrt(g.dephasing) * op for op in spin_algebra(N, "z")]
+    @test ops[2N+1:3N] == [sqrt(g.pumping) * op for op in spin_algebra(N, "+")]
+    @test ops[3N+1] == sqrt(g.collective_emission) * jspin(N, op="-", basis="uncoupled")
+    @test ops[3N+2] == sqrt(g.collective_dephasing) * jspin(N, op="z", basis="uncoupled")
+    @test ops[3N+3] == sqrt(g.collective_pumping) * jspin(N, op="+", basis="uncoupled")
+    @test isempty(collapse_uncoupled(N))
+    @test_logs (:warn,) collapse_uncoupled(11)
+end
+
+@testset "Dicke vs uncoupled dynamics" begin
+    # The permutationally invariant Liouvillian reproduces the full 2^N master equation
+    N = 2
+    rates = (emission=0.3, dephasing=0.2, pumping=0.1, collective_emission=0.5,
+        collective_dephasing=0.4, collective_pumping=0.25)
+    system = Dicke(N; hamiltonian=jspin(N, op="x"), rates...)
+    tlist = LinRange(0, 3, 31)
+    sol_dicke = mesolve(liouvillian_dicke(system), dicke(N, 1.0, 1.0), tlist, progress_bar=Val(false))
+    psi0 = tensor(basis(2, 0), basis(2, 0))
+    sol_full = mesolve(jspin(N, op="x", basis="uncoupled"), ket2dm(psi0), tlist, c_ops(system),
+        progress_bar=Val(false))
+    jz_dicke = real.(expect(jspin(N, op="z"), sol_dicke.states))
+    jz_full = real.(expect(jspin(N, op="z", basis="uncoupled"), sol_full.states))
+    @test isapprox(jz_dicke, jz_full, atol=1e-6)
+end
+
+@testset "loss factors vanishing branches" begin
+    system = Dicke(2)
+    for gamma in [gamma1, gamma2, gamma3, gamma4, gamma5, gamma6, gamma7, gamma8, gamma9]
+        @test gamma(system, (1, 0, 0)) == 0
+    end
+    # j = 0 avoids the division by zero
+    system = Dicke(2, emission=1.0)
+    @test gamma2(system, (0, 0, 0)) == 0.0
+    @test gamma3(system, (0, 0, 0)) == 0.0
+    @test gamma4(system, (-1, 0, 0)) == 0.0
+end
+
+@testset "dicke state" begin
+    rho = dicke(3, 0.5, -0.5)
+    @test tr(rho) == 1.0
+    @test isdiagonal(rho)
+    @test size(rho) == (num_dicke_states(3), num_dicke_states(3))
+    @test rho.data[end, end] == 1.0
+end
