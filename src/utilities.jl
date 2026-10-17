@@ -17,11 +17,45 @@ function compute_order(dimensions)
     return perm_idxs
 end
 
+"""
+    super_tensor(to_tensor)
+
+Tensor product of superoperators.
+
+Given superoperators `L₁, L₂, …, Lₙ` acting on density matrices of the Hilbert
+spaces `H₁, H₂, …, Hₙ`, return the superoperator `L` acting on `H₁ ⊗ H₂ ⊗ … ⊗ Hₙ` such that
+
+```math
+L\\,[\\rho_1 \\otimes \\rho_2 \\otimes \\dots \\otimes \\rho_n] = L_1[\\rho_1] \\otimes L_2[\\rho_2] \\otimes \\dots \\otimes L_n[\\rho_n].
+```
+
+The subsystems may have different dimensions. This is the equivalent of
+`super_tensor` in QuTiP.
+
+# Arguments
+- `to_tensor`: a tuple (or vector) of `SuperOperator` `QuantumObject`s.
+
+# Returns
+- A `SuperOperator` `QuantumObject` whose dimensions are the concatenation of the
+  dimensions of the input superoperators.
+
+# Example
+```julia
+using Piqs, QuantumToolbox
+a = destroy(2)
+b = destroy(3)
+L_a = liouvillian(a' * a, [a])
+id_b = sprepost(qeye(3), qeye(3))
+L = super_tensor((L_a, id_b))   # acts on a 2 ⊗ 3 Hilbert space
+```
+"""
 function super_tensor(to_tensor)
-    dims = map(op -> op.dims[1], to_tensor)
-    dimensions = tuple((d for op_dim in dims for d in (op_dim, op_dim))...)
+    dims = reduce(vcat, map(op -> collect(op.dims), to_tensor))
+    # kron and reshape are column-major: the last operator varies fastest, so the
+    # (row, column) index pairs of the vectorized density matrix come in reverse order.
+    dimensions = tuple((d for op in reverse(collect(to_tensor)) for d in ntuple(_ -> prod(op.dims), 2))...)
     L_tens = kron(map(op -> op.data, to_tensor)...)
     order = compute_order(dimensions)
     L_tensored = permute_dimensions(L_tens, dimensions, order)
-    return Qobj(L_tensored, dims=dims, type=SuperOperator)
+    return Qobj(L_tensored, dims=Tuple(dims), type=SuperOperator)
 end

@@ -340,6 +340,9 @@ end
     diag_sol = pisolve(diag_system, diag_initial_state, tlist)
     true_diag_sol = [0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.11627208 0.0 0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0 0.3995764 0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0 0.0 0.0 0.13533528 0.0 0.0; 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.34881625 0.0; 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0]
     @test isapprox(Matrix(diag_sol.states[end].data), true_diag_sol, atol=1e-6)
+    @test length(diag_sol.states) == length(tlist)
+    jz_me = expect(jz, mesolve(liouvillian_dicke(diag_system), diag_initial_state, tlist, progress_bar=Val(false)).states)
+    @test isapprox(real.(expect(jz, diag_sol.states)), real.(jz_me), atol=1e-5)
 
     non_diag_system = Dicke(4, hamiltonian=jx, emission=0.1)
     @test_throws ArgumentError pisolve(non_diag_system, diag_initial_state, tlist)
@@ -531,4 +534,32 @@ end
         0.0+0im 0.0+0im 0.0+0im 0.0+0im 0.0+0im 0.0+0im 0.0+0im 0.0+0im 0.0+0im 0.0+0im -1.19816997+0im -0.0463006669+0im 0.0+0im 0.0+0im -31.0062767+0im -1.19816997+0im;
         0.0+0im 0.0+0im 0.0+0im 0.0+0im 0.0+0im 0.0+0im 0.0+0im 0.0+0im 0.0+0im 0.0+0im -0.0463006669+0im -1.19816997+0im 0.0+0im 0.0+0im -1.19816997+0im -31.0062767+0im]
     @test isapprox(Matrix(L_12.data), L_hardcoded)
+end
+
+@testset "super_tensor different dimensions" begin
+    d1, d2, d3 = 2, 3, 4
+    a, b, c = destroy(d1), destroy(d2), destroy(d3)
+    H1, H2 = a' * a, b' * b + 0.4 * (b + b')
+    L1 = liouvillian(H1, [sqrt(0.3) * a])
+    L2 = liouvillian(H2, [sqrt(0.7) * b])
+    L3 = liouvillian(c' * c, [c])
+    id1 = sprepost(qeye(d1), qeye(d1))
+    id2 = sprepost(qeye(d2), qeye(d2))
+
+    # L1 ⊗ id + id ⊗ L2 is the Liouvillian of the uncoupled composite system
+    L_sum = super_tensor((L1, id2)) + super_tensor((id1, L2))
+    L_ref = liouvillian(tensor(H1, qeye(d2)) + tensor(qeye(d1), H2),
+        [sqrt(0.3) * tensor(a, qeye(d2)), sqrt(0.7) * tensor(qeye(d1), b)])
+    @test L_sum.dims == [d1, d2]
+    @test size(L_sum) == ((d1 * d2)^2, (d1 * d2)^2)
+    @test isapprox(Matrix(L_sum.data), Matrix(L_ref.data))
+
+    # (L1 ⊗ L2 ⊗ L3)[ρ1 ⊗ ρ2 ⊗ ρ3] == L1[ρ1] ⊗ L2[ρ2] ⊗ L3[ρ3]
+    Ls = (L1, L2, L3)
+    ρs = [rand_dm(d1), rand_dm(d2), rand_dm(d3)]
+    S = super_tensor(Ls)
+    @test S.dims == [d1, d2, d3]
+    lhs = vector_to_operator(S * operator_to_vector(tensor(ρs...)))
+    rhs = tensor([vector_to_operator(L * operator_to_vector(ρ)) for (L, ρ) in zip(Ls, ρs)]...)
+    @test isapprox(lhs.data, rhs.data)
 end
