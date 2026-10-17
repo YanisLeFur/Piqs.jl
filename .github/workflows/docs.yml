@@ -6,7 +6,8 @@ on:
       - main
 
 permissions:
-  contents: write  
+  contents: write
+  actions: write  # lets julia-actions/cache clean up old caches
 
 jobs:
   docs:
@@ -19,6 +20,8 @@ jobs:
         uses: julia-actions/setup-julia@v2
         with:
           version: '1.11'  # Use your preferred version
+
+      - uses: julia-actions/cache@v2
 
       - name: Install dependencies
         run: |
