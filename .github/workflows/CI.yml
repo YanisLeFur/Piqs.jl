@@ -38,13 +38,8 @@ jobs:
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
-      - name: Run tests with coverage
-        run: |
-          julia --project -e '
-            using Pkg;
-            Pkg.test(coverage=true);
-            using Coverage;
-            LCOV.writefile("lcov.info", process_folder())'
+      - uses: julia-actions/julia-runtest@v1
+      - uses: julia-actions/julia-processcoverage@v1
       - name: Upload to Codecov
         uses: codecov/codecov-action@v5
         with:
