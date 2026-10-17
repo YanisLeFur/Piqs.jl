@@ -1,7 +1,7 @@
 # API reference
 
 ```@meta
-CurrentModule = Piqs
+CurrentModule = PIQSolver
 ```
 
 ## System
@@ -60,7 +60,7 @@ am
 
 ```@docs
 Pim
-Piqs.solve
+PIQSolver.solve
 isdicke
 tau_valid
 calculate_j_m

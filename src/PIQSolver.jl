@@ -1,4 +1,4 @@
-module Piqs
+module PIQSolver
 using LinearAlgebra
 using SparseArrays
 import QuantumToolbox

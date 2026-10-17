@@ -124,7 +124,7 @@ instead of ``2^N``.
 
 # Example
 ```julia
-using Piqs, QuantumToolbox
+using PIQSolver, QuantumToolbox
 N = 6
 jx, jy, jz = jspin(N)
 system = Dicke(N, hamiltonian=jz, emission=0.5, collective_emission=1.0)
@@ -337,7 +337,7 @@ which is integrated with the permutational invariant matrix [`Pim`](@ref).
 
 # Example
 ```julia
-using Piqs, QuantumToolbox
+using PIQSolver, QuantumToolbox
 N = 4
 system = Dicke(N, hamiltonian=jspin(N, op="z"), emission=0.1)
 rho0 = dicke(N, N / 2, N / 2)          # fully excited state

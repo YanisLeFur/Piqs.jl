@@ -1,4 +1,4 @@
-using Piqs
+using PIQSolver
 using Test
 using QuantumToolbox
 using LinearAlgebra
