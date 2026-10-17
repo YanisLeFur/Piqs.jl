@@ -4,8 +4,8 @@
 
 [![CI](https://github.com/YanisLeFur/PIQSolver.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/YanisLeFur/PIQSolver.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![codecov](https://codecov.io/gh/YanisLeFur/PIQSolver.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/YanisLeFur/PIQSolver.jl)
-[![Docs: stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://yanislefur.github.io/PIQSolver.jl/stable/)
-[![Docs: dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://yanislefur.github.io/PIQSolver.jl/dev/)
+[![Docs](https://img.shields.io/badge/docs-dev-blue.svg)](https://yanislefur.github.io/PIQSolver.jl/dev/)
+[![Julia](https://img.shields.io/badge/julia-%E2%89%A5%201.10-9558B2.svg?logo=julia)](https://julialang.org)
 [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](LICENSE)
 
 PIQSolver.jl simulates the open-system dynamics of ensembles of **N identical two-level
@@ -80,17 +80,17 @@ intensity = real.(sol.expect[2, :])     # emitted intensity ⟨J₊J₋⟩(t)
 maximum(intensity)                      # ≈ 82, compared with N = 20 for independent emitters
 ```
 
-More examples are in the [documentation](https://yanislefur.github.io/PIQSolver.jl/stable/),
+More examples are in the [documentation](https://yanislefur.github.io/PIQSolver.jl/dev/),
 including driven-dissipative ensembles, the fast diagonal solver, a cross-check against
 the full 2^N simulation, and spins coupled to a lossy cavity.
 
 ## Documentation
 
-- [**Getting started**](https://yanislefur.github.io/PIQSolver.jl/stable/getting_started):
+- [**Getting started**](https://yanislefur.github.io/PIQSolver.jl/dev/getting_started):
   the Dicke basis, operators, states and time evolution.
-- [**Examples**](https://yanislefur.github.io/PIQSolver.jl/stable/examples): complete
+- [**Examples**](https://yanislefur.github.io/PIQSolver.jl/dev/examples): complete
   worked examples.
-- [**API reference**](https://yanislefur.github.io/PIQSolver.jl/stable/api): every
+- [**API reference**](https://yanislefur.github.io/PIQSolver.jl/dev/api): every
   exported function.
 
 ## Citing
