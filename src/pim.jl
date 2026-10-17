@@ -234,7 +234,7 @@ function solve(p::Pim, rho0, tlist)
         push!(output_states, Qobj(diag))
     end
     output_states[end]
-    output = TimeEvolutionSol(tlist, output_states, nothing, sol.retcode, Tsit5(), NaN, NaN)
+    output = TimeEvolutionSol(tlist, sol.t, output_states, nothing, sol.retcode, sol.alg, NaN, NaN)
 
     return output
 

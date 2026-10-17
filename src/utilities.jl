@@ -50,12 +50,14 @@ L = super_tensor((L_a, id_b))   # acts on a 2 ⊗ 3 Hilbert space
 ```
 """
 function super_tensor(to_tensor)
-    dims = reduce(vcat, map(op -> collect(op.dims), to_tensor))
+    # the dims of a superoperator are ((row, col), (row, col)) Hilbert-space dims
+    hilbert_dims = map(op -> collect(op.dims[1][1]), to_tensor)
+    dims = Tuple(reduce(vcat, hilbert_dims))
     # kron and reshape are column-major: the last operator varies fastest, so the
     # (row, column) index pairs of the vectorized density matrix come in reverse order.
-    dimensions = tuple((d for op in reverse(collect(to_tensor)) for d in ntuple(_ -> prod(op.dims), 2))...)
+    dimensions = tuple((d for hd in reverse(collect(hilbert_dims)) for d in ntuple(_ -> prod(hd), 2))...)
     L_tens = kron(map(op -> op.data, to_tensor)...)
     order = compute_order(dimensions)
     L_tensored = permute_dimensions(L_tens, dimensions, order)
-    return Qobj(L_tensored, dims=Tuple(dims), type=SuperOperator)
+    return Qobj(L_tensored, dims=((dims, dims), (dims, dims)), type=SuperOperator())
 end
