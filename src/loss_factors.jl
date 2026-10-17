@@ -1,6 +1,12 @@
 export gamma1, gamma2, gamma3, gamma4, gamma5, gamma6, gamma7, gamma8, gamma9
 
 
+"""
+    gamma1(d::Dicke, jmm1)
+
+Calculate the rate coupling the density matrix element ``\\rho_{j, m, m'}`` to
+``\\rho_{j, m, m'}`` in the Lindbladian of `d`, with `jmm1 = (j, m, m')`.
+"""
 function gamma1(d, jmm1)
     j, m, m1 = jmm1
     N = d.N * 1.0
@@ -21,6 +27,12 @@ function gamma1(d, jmm1)
 
 end
 
+"""
+    gamma2(d::Dicke, jmm1)
+
+Calculate the rate coupling the density matrix element ``\\rho_{j, m, m'}`` to
+``\\rho_{j, m+1, m'+1}`` in the Lindbladian of `d`, with `jmm1 = (j, m, m')`.
+"""
 function gamma2(d::Dicke, jmm1::Tuple{Number,Number,Number})
     j, m, m1 = jmm1
     N = d.N * 1.0
@@ -41,6 +53,12 @@ function gamma2(d::Dicke, jmm1::Tuple{Number,Number,Number})
 
 end
 
+"""
+    gamma3(d::Dicke, jmm1)
+
+Calculate the rate coupling the density matrix element ``\\rho_{j, m, m'}`` to
+``\\rho_{j+1, m+1, m'+1}`` in the Lindbladian of `d`, with `jmm1 = (j, m, m')`.
+"""
 function gamma3(d::Dicke, jmm1::Tuple{Number,Number,Number})
     j, m, m1 = jmm1
     N = d.N * 1.0
@@ -52,6 +70,12 @@ function gamma3(d::Dicke, jmm1::Tuple{Number,Number,Number})
     end
 end
 
+"""
+    gamma4(d::Dicke, jmm1)
+
+Calculate the rate coupling the density matrix element ``\\rho_{j, m, m'}`` to
+``\\rho_{j-1, m+1, m'+1}`` in the Lindbladian of `d`, with `jmm1 = (j, m, m')`.
+"""
 function gamma4(d::Dicke, jmm1::Tuple{Number,Number,Number})
     N = d.N * 1.0
     j, m, m1 = jmm1
@@ -63,6 +87,12 @@ function gamma4(d::Dicke, jmm1::Tuple{Number,Number,Number})
 end
 
 
+"""
+    gamma5(d::Dicke, jmm1)
+
+Calculate the rate coupling the density matrix element ``\\rho_{j, m, m'}`` to
+``\\rho_{j+1, m, m'}`` in the Lindbladian of `d`, with `jmm1 = (j, m, m')`.
+"""
 function gamma5(d::Dicke, jmm1::Tuple{Number,Number,Number})
     N = d.N * 1.0
     j, m, m1 = jmm1
@@ -74,6 +104,12 @@ function gamma5(d::Dicke, jmm1::Tuple{Number,Number,Number})
 end
 
 
+"""
+    gamma6(d::Dicke, jmm1)
+
+Calculate the rate coupling the density matrix element ``\\rho_{j, m, m'}`` to
+``\\rho_{j-1, m, m'}`` in the Lindbladian of `d`, with `jmm1 = (j, m, m')`.
+"""
 function gamma6(d::Dicke, jmm1::Tuple{Number,Number,Number})
     j, m, m1 = jmm1
     N = d.N * 1.0
@@ -84,6 +120,12 @@ function gamma6(d::Dicke, jmm1::Tuple{Number,Number,Number})
     end
 end
 
+"""
+    gamma7(d::Dicke, jmm1)
+
+Calculate the rate coupling the density matrix element ``\\rho_{j, m, m'}`` to
+``\\rho_{j+1, m-1, m'-1}`` in the Lindbladian of `d`, with `jmm1 = (j, m, m')`.
+"""
 function gamma7(d::Dicke, jmm1::Tuple{Number,Number,Number})
     j, m, m1 = jmm1
     N = 1.0 * d.N
@@ -95,6 +137,12 @@ function gamma7(d::Dicke, jmm1::Tuple{Number,Number,Number})
 end
 
 
+"""
+    gamma8(d::Dicke, jmm1)
+
+Calculate the rate coupling the density matrix element ``\\rho_{j, m, m'}`` to
+``\\rho_{j, m-1, m'-1}`` in the Lindbladian of `d`, with `jmm1 = (j, m, m')`.
+"""
 function gamma8(d::Dicke, jmm1::Tuple{Number,Number,Number})
     j, m, m1 = jmm1
     N = 1.0 * d.N
@@ -113,6 +161,12 @@ function gamma8(d::Dicke, jmm1::Tuple{Number,Number,Number})
     return pump + collective_pump
 end
 
+"""
+    gamma9(d::Dicke, jmm1)
+
+Calculate the rate coupling the density matrix element ``\\rho_{j, m, m'}`` to
+``\\rho_{j-1, m-1, m'-1}`` in the Lindbladian of `d`, with `jmm1 = (j, m, m')`.
+"""
 function gamma9(d::Dicke, jmm1::Tuple{Number,Number,Number})
     j, m, m1 = jmm1
     N = d.N * 1.0

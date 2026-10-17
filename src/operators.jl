@@ -1,17 +1,16 @@
 export lindbladian, liouvillian_dicke, energy_degeneracy, state_degeneracy, m_degeneracy, ap, am, spin_algebra, _jspin_uncoupled, jspin, collapse_uncoupled
 
 
-function lindbladian(d::Dicke)::QuantumObject
-    """
-    Build the Lindbladian superoperator of the dissipative dynamics as a
-    sparse matrix.
+"""
+    lindbladian(d::Dicke)
 
-    Returns
-    ----------
-    lindblad_qobj: QuantumObject
-        The matrix size is (nds**2, nds**2) where nds is the number of
-        Dicke states.
-    """
+Build the Lindbladian superoperator of the dissipative dynamics as a
+sparse matrix.
+
+# Returns
+- `lindblad_qobj` (`QuantumObject`): The matrix size is (nds², nds²) where nds is the number of Dicke states.
+"""
+function lindbladian(d::Dicke)::QuantumObject
     N = d.N
     nds = num_dicke_states(N)
 
@@ -49,16 +48,31 @@ function lindbladian(d::Dicke)::QuantumObject
     return lindblad_qobj
 end
 
+"""
+    liouvillian_dicke(d::Dicke)
+
+Build the total Liouvillian using the Dicke basis.
+
+This is the [`lindbladian`](@ref) of `d` plus the coherent part
+``-i[H, \\cdot]`` if `d` has a Hamiltonian. The result can be given directly to
+`QuantumToolbox.mesolve`.
+
+# Returns
+- `liouv` (`QuantumObject`): The Liouvillian matrix for the system.
+
+# Example
+```julia
+using Piqs, QuantumToolbox
+N = 4
+system = Dicke(N, hamiltonian=jspin(N, op="x"), collective_emission=1.0)
+L = liouvillian_dicke(system)
+rho0 = dicke(N, N / 2, N / 2)
+sol = mesolve(L, rho0, LinRange(0, 5, 50))
+```
+"""
 function liouvillian_dicke(d::Dicke)::QuantumObject
-    """Build the total Liouvillian using the Dicke basis.
 
-        Returns
-        -------
-        liouv: QuantumObject
-            The Liouvillian matrix for the system.
-        """
-
-    if d.hamiltonian == Nothing
+    if isnothing(d.hamiltonian)
         return lindbladian(d)
     else
         return lindbladian(d) - 1im * QuantumToolbox.spre(d.hamiltonian) + 1im * QuantumToolbox.spost(d.hamiltonian)
@@ -68,28 +82,21 @@ end
 
 
 
-## TO WORK on
+"""
+    energy_degeneracy(N::Integer, m::Number)
 
+Calculate the number of Dicke states with same energy.
+
+The computation uses `BigFloat` factorials, which allows to explore N > 1000.
+
+# Arguments
+- `N` (`Integer`): The number of two-level systems.
+- `m` (`Number`): Total spin z-axis projection eigenvalue. This is proportional to the total energy.
+
+# Returns
+- `degeneracy` (`Integer`): The energy degeneracy
+"""
 function energy_degeneracy(N::Integer, m::Number)::Integer
-    """Calculate the number of Dicke states with same energy.
-
-    The use of the `Decimals` class allows to explore N > 1000,
-    unlike the built-in function `scipy.special.binom`
-
-    Parameters
-    ----------
-    N: Integer
-        The number of two-level systems.
-
-    m: Number
-        Total spin z-axis projection eigenvalue.
-        This is proportional to the total energy.
-
-    Returns
-    -------
-    degeneracy: Integer
-        The energy degeneracy
-    """
     numerator = factorial(BigFloat(N))
     d1 = factorial(BigFloat(N / 2 + m))
     d2 = factorial(BigFloat(N / 2 - m))
@@ -97,27 +104,24 @@ function energy_degeneracy(N::Integer, m::Number)::Integer
     return trunc(Int, degeneracy)
 end
 
+"""
+    state_degeneracy(N::Integer, j::Number)
+
+Calculate the degeneracy of the Dicke state.
+
+Each state ``|j, m\\rangle`` includes D(N,j) irreducible
+representations ``|j, m, \\alpha\\rangle``.
+
+Uses arbitrary-precision integers to calculate large numerators and denominators.
+
+# Arguments
+- `N` (`Integer`): The number of two-level systems.
+- `j` (`AbstractFloat`): Total spin eigenvalue (cooperativity).
+
+# Returns
+- `degeneracy` (`Integer`): The state degeneracy.
+"""
 function state_degeneracy(N::Integer, j::Number)::Integer
-    """Calculate the degeneracy of the Dicke state.
-
-    Each state :math:`|j, m\\rangle` includes D(N,j) irreducible
-    representations :math:`|j, m, \\alpha\\rangle`.
-
-    Uses Decimals to calculate higher numerator and denominators numbers.
-
-    Parameters
-    ----------
-    N: Integer
-        The number of two-level systems.
-
-    j: AbstractFloat
-        Total spin eigenvalue (cooperativity).
-
-    Returns
-    -------
-    degeneracy: INteger
-        The state degeneracy.
-    """
     if j < 0
         throw(DomainError("j value should be >= 0"))
     end
@@ -131,24 +135,20 @@ end
 
 
 
+"""
+    m_degeneracy(N::Integer, m::Number)
+
+Calculate the number of Dicke states ``|j, m\\rangle`` with
+same energy.
+
+# Arguments
+- `N` (`Integer`): The number of two-level systems.
+- `m` (`AbstractFloat`): Total spin z-axis projection eigenvalue (proportional to the total energy).
+
+# Returns
+- `degeneracy` (`Integer`): The m-degeneracy.
+"""
 function m_degeneracy(N::Integer, m::Number)::Integer
-    """Calculate the number of Dicke states :math:`|j, m\\rangle` with
-    same energy.
-
-    Parameters
-    ----------
-    N: Integer
-        The number of two-level systems.
-
-    m: AbstractFloat
-        Total spin z-axis projection eigenvalue (proportional to the total
-        energy).
-
-    Returns
-    -------
-    degeneracy: Integer
-        The m-degeneracy.
-    """
     jvals = j_vals(N)
     maxj = maximum(jvals)
     if m < (-maxj)
@@ -159,74 +159,65 @@ function m_degeneracy(N::Integer, m::Number)::Integer
 end
 
 
+"""
+    ap(j::AbstractFloat, m::AbstractFloat)
+
+Calculate the coefficient `ap` by applying J_+ |j, m>.
+
+The action of ap is given by:
+``J_{+}|j, m\\rangle = A_{+}(j, m)|j, m+1\\rangle``
+
+# Arguments
+- `j` (`AbstractFloat`): The value for j.
+- `m` (`AbstractFloat`): The value for m.
+
+# Returns
+- `a_plus` (`AbstractFloat`): The value of ``a_{+}``.
+"""
 function ap(j::AbstractFloat, m::AbstractFloat)::AbstractFloat
-    """Calculate the coefficient `ap` by applying J_+ |j, m>.
-
-    The action of ap is given by:
-    :math:`J_{+}|j, m\\rangle = A_{+}(j, m)|j, m+1\\rangle`
-
-    Parameters
-    ----------
-    j : AbstractFloat
-        The value for j.
-
-    m : AbstractFloat
-        The value for m.
-
-    Returns
-    -------
-    a_plus: AbstractFloat
-        The value of :math:`a_{+}`.
-    """
     return sqrt((j - m) * (j + m + 1))
 end
 
+"""
+    am(j::AbstractFloat, m::AbstractFloat)
+
+Calculate the coefficient `am` by applying J_- |j, m>.
+
+The action of am is given by:
+``J_{-}|j, m\\rangle = A_{-}(j, m)|j, m-1\\rangle``
+
+# Arguments
+- `j` (`AbstractFloat`): The value for j.
+- `m` (`AbstractFloat`): The value for m.
+
+# Returns
+- `a_minus` (`AbstractFloat`): The value of ``a_{-}``.
+"""
 function am(j::AbstractFloat, m::AbstractFloat)::AbstractFloat
-    """Calculate the coefficient `am` by applying J_- |j, m>.
-
-    The action of am is given by:
-    :math:`J_{-}|j, m\\rangle = A_{-}(j, m)|j, m-1\\rangle`
-
-    Parameters
-    ----------
-    j : AbstractFloat
-        The value for j.
-
-    m : AbstractFloat
-        The value for m.
-
-    Returns
-    -------
-    a_minus: AbstractFloat
-        The value of :math:`a_{-}`.
-    """
     return sqrt((j + m) * (j - m + 1))
 end
 
+"""
+    spin_algebra(N::Integer, op::Union{String,Nothing}=nothing)
+
+Create the list [sx, sy, sz] with the spin operators.
+
+The operators are constructed for a collection of N two-level systems
+(TLSs). Each element of the list, i.e., sx, is a vector of `QuantumObject`
+objects (spin matrices), as it contains the list of the SU(2) Pauli
+matrices for the N TLSs. Each TLS operator sx[i], with i = 0, ..., (N-1),
+is placed in a ``2^N``-dimensional Hilbert space.
+
+# Notes
+sx[i] is ``\\frac{\\sigma_x}{2}`` in the composite Hilbert space.
+
+# Arguments
+- `N` (`Integer`): The number of two-level systems.
+
+# Returns
+- `spin_operators` (`QuantumObject or Vector{QuantumObject}`): A list of `QuantumObject` operators - [sx, sy, sz] or the requested operator.
+"""
 function spin_algebra(N::Integer, op::Union{String,Nothing}=nothing)
-    """Create the list [sx, sy, sz] with the spin operators.
-
-    The operators are constructed for a collection of N two-level systems
-    (TLSs). Each element of the list, i.e., sx, is a vector of `qutip.Qobj`
-    objects (spin matrices), as it cointains the list of the SU(2) Pauli
-    matrices for the N TLSs. Each TLS operator sx[i], with i = 0, ..., (N-1),
-    is placed in a :math:`2^N`-dimensional Hilbert space.
-
-    Notes
-    -----
-    sx[i] is :math:`\\frac{\\sigma_x}{2}` in the composite Hilbert space.
-
-    Parameters
-    ----------
-    N: Integer
-        The number of two-level systems.
-
-    Returns
-    -------
-    spin_operators: QuantumObject or Vector{QuantumObject}
-        A list of `qutip.Qobj` operators - [sx, sy, sz] or the
-        requested operator.
-    """
     ops = Dict(
         "x" => 0.5 * sigmax(),
         "y" => 0.5 * sigmay(),
@@ -245,30 +236,23 @@ function spin_algebra(N::Integer, op::Union{String,Nothing}=nothing)
 end
 
 
+"""
+    _jspin_uncoupled(N::Integer, op::Union{String,Nothing}=nothing)
+
+Construct the collective spin algebra in the uncoupled basis.
+
+jx, jy, jz, jp, jm are constructed in the uncoupled basis of the
+two-level system (TLS). Each collective operator is placed in a
+Hilbert space of dimension 2^N.
+
+# Arguments
+- `N` (`Integer`): The number of two-level systems.
+- `op` (`String`): The operator to return 'x', 'y', 'z', '+', '-'. If no operator is given, the output is the list of operators for ['x', 'y', 'z'].
+
+# Returns
+- `collective_operators` (`QuantumObject or Vector{QuantumObject}`): A list of `QuantumObject` representing all the operators in the "uncoupled" basis or a single operator requested.
+"""
 function _jspin_uncoupled(N::Integer, op::Union{String,Nothing}=nothing)
-    """
-    Construct the collective spin algebra in the uncoupled basis.
-
-    jx, jy, jz, jp, jm are constructed in the uncoupled basis of the
-    two-level system (TLS). Each collective operator is placed in a
-    Hilbert space of dimension 2^N.
-
-    Parameters
-    ----------
-    N: Integer
-        The number of two-level systems.
-
-    op: String
-        The operator to return 'x', 'y', 'z', '+', '-'.
-        If no operator is given, the output is the list of operators
-        for ['x', 'y', 'z'].
-
-    Returns
-    -------
-    collective_operators: QuantumObject or Vector{QuantumObject}
-        A list of `QuantumObject` representing all the operators in
-        the "uncoupled" basis or a single operator requested.
-    """
     # Ensure N is an integer
     N = trunc(Int, N)
 
@@ -297,34 +281,32 @@ function _jspin_uncoupled(N::Integer, op::Union{String,Nothing}=nothing)
 end
 
 
+"""
+    jspin(N::Integer; op::Union{String,Nothing}=nothing, basis::String="dicke")
+
+Calculate the list of collective operators of the total algebra.
+
+The Dicke basis ``|j,m\\rangle\\langle j,m'|`` is used by
+default. Otherwise with "uncoupled" the operators are in a
+``2^N`` space.
+
+# Arguments
+- `N` (`Integer`): Number of two-level systems.
+- `op` (`String`): The operator to return 'x','y','z','+','-'. If no operator given, then output is the list of operators for ['x','y','z'].
+- `basis` (`String`): The basis of the operators - "dicke" or "uncoupled" (default: "dicke").
+
+# Returns
+- `j_alg` (`QuantumObject or Vector{QuantumObject}`): A list of `QuantumObject` representing all the operators in the "dicke" or "uncoupled" basis or a single operator requested.
+
+# Example
+```julia
+using Piqs
+jx, jy, jz = jspin(4)                      # Dicke basis, 9×9 matrices
+jp = jspin(4, op="+")
+jz_full = jspin(4, op="z", basis="uncoupled")  # 2^4 = 16 dimensional
+```
+"""
 function jspin(N::Integer; op::Union{String,Nothing}=nothing, basis::String="dicke")
-    """
-    Calculate the list of collective operators of the total algebra.
-
-    The Dicke basis :math:`|j,m\\rangle\\langle j,m'|` is used by
-    default. Otherwise with "uncoupled" the operators are in a
-    :math:`2^N` space.
-
-    Parameters
-    ----------
-    N: Integer
-        Number of two-level systems.
-
-    op: String
-        The operator to return 'x','y','z','+','-'.
-        If no operator given, then output is the list of operators
-        for ['x','y','z'].
-
-    basis: String
-        The basis of the operators - "dicke" or "uncoupled"
-        default: "dicke".
-
-    Returns
-    -------
-    j_alg: QuantumObject or Vector{QuantumObject}
-        A list of `qutip.Qobj` representing all the operators in
-        the "dicke" or "uncoupled" basis or a single operator requested.
-    """
 
     if basis == "uncoupled"
         return _jspin_uncoupled(N, op)
@@ -373,60 +355,40 @@ function jspin(N::Integer; op::Union{String,Nothing}=nothing, basis::String="dic
 end
 
 
+"""
+    collapse_uncoupled(N::Integer; emission=0.0, dephasing=0.0, pumping=0.0,
+                       collective_emission=0.0, collective_dephasing=0.0, collective_pumping=0.0)
+
+Create the collapse operators (c_ops) of the Lindbladian in the uncoupled basis.
+
+These operators are in the uncoupled basis of the two-level system
+(TLS) SU(2) Pauli matrices.
+
+# Notes
+The collapse operator list can be given to `QuantumToolbox.mesolve`.
+Notice that the operators are placed in a Hilbert space of dimension
+``2^N``
+Thus the method is suitable only for small N (of the order of 10).
+
+# Arguments
+- `N` (`Integer`): The number of two-level systems.
+- `emission` (`AbstractFloat`): Incoherent emission coefficient (also nonradiative emission). (default: 0.0).
+- `dephasing` (`AbstractFloat`): Local dephasing coefficient. (default: 0.0).
+- `pumping` (`AbstractFloat`): Incoherent pumping coefficient. (default: 0.0).
+- `collective_emission` (`AbstractFloat`): Collective (superradiant) emission coefficient. (default: 0.0).
+- `collective_pumping` (`AbstractFloat`): Collective pumping coefficient. (default: 0.0).
+- `collective_dephasing` (`AbstractFloat`): Collective dephasing coefficient. (default: 0.0).
+
+# Returns
+- `c_ops` (`Vector{QuantumObject}`): The Vector of collapse operators as `QuantumObject` for the system.
+"""
 function collapse_uncoupled(N::Integer; emission::Union{AbstractFloat,Integer}=0.0, dephasing::Union{AbstractFloat,Integer}=0.0, pumping::Union{AbstractFloat,Integer}=0.0,
     collective_emission::Union{AbstractFloat,Integer}=0.0, collective_dephasing::Union{AbstractFloat,Integer}=0.0,
     collective_pumping::Union{AbstractFloat,Integer}=0.0)
-    """
-    Create the collapse operators (c_ops) of the Lindbladian in the uncoupled basis.
-
-    These operators are in the uncoupled basis of the two-level system
-    (TLS) SU(2) Pauli matrices.
-
-    Notes
-    -----
-    The collapse operator list can be given to `qutip.mesolve`.
-    Notice that the operators are placed in a Hilbert space of dimension
-    :math:`2^N`
-    Thus the method is suitable only for small N (of the order of 10).
-
-    Parameters
-    ----------
-    N: Integer
-        The number of two-level systems.
-
-    emission: AbstractFloat
-        Incoherent emission coefficient (also nonradiative emission).
-        default: 0.0
-
-    dephasing: AbstractFloat
-        Local dephasing coefficient.
-        default: 0.0
-
-    pumping: AbstractFloat
-        Incoherent pumping coefficient.
-        default: 0.0
-
-    collective_emission: AbstractFloat
-        Collective (superradiant) emmission coefficient.
-        default: 0.0
-
-    collective_pumping: AbstractFloat
-        Collective pumping coefficient.
-        default: 0.0
-
-    collective_dephasing: AbstractFloat
-        Collective dephasing coefficient.
-        default: 0.0
-
-    Returns
-    -------
-    c_ops: Vector{QuantumObject}
-        The Vector of collapse operators as `QuantumObject` for the system.
-    """
     N = trunc(Int, N)
 
     if N > 10
-        @warn "N > 10. dim(H) = 2^N. Better use `piqs.lindbladian` to reduce Hilbert space dimension and exploit permutational symmetry."
+        @warn "N > 10. dim(H) = 2^N. Better use `Piqs.lindbladian` to reduce Hilbert space dimension and exploit permutational symmetry."
     end
 
     sz = spin_algebra(N)[3]

@@ -1,22 +1,21 @@
-export num_dicke_states, num_dicke_ladders, num_tls, isdiagonal, get_blocks, j_vals, m_vals, get_index, jmm1_dictionary, Dicke, pisolve, prune_eigenstates, c_ops, coefficient_matrix
+export num_dicke_states, num_dicke_ladders, num_tls, isdiagonal, get_blocks, j_vals, m_vals, get_index, jmm1_dictionary, Dicke, pisolve, c_ops, coefficient_matrix
 
 using QuantumToolbox
 
 
 
+"""
+    num_dicke_states(N::Integer)
+
+Calculate number of Dicke states
+
+# Arguments
+- `N` (`Integer`): The number of two-level systems.
+
+# Returns
+- `nds` (`Integer`): The number of Dicke states.
+"""
 function num_dicke_states(N::Integer)::Integer
-    """Calculate number of Dicke states
-
-    Parameters
-    ----------
-    N: Integer
-        The number of two-level systems.
-
-    Returns
-    -------
-    nds: Integer
-        The number of Dicke states.
-    """
     if (N < 1)
         throw(DomainError(N, "The number of states must be greater than one."))
     end
@@ -25,40 +24,38 @@ function num_dicke_states(N::Integer)::Integer
 end
 
 
+"""
+    num_dicke_ladders(N::Integer)
+
+Calculate the total number of ladders in the Dicke space.
+
+For a collection of N two-level systems it counts how many different
+"j" exist or the number of blocks in the block-diagonal matrix.
+
+# Arguments
+- `N` (`Integer`): The number of two-level systems.
+
+# Returns
+- `Nj` (`Integer`): The number of Dicke ladders.
+"""
 function num_dicke_ladders(N::Integer)::Integer
-    """Calculate the total number of ladders in the Dicke space.
-
-    For a collection of N two-level systems it counts how many different
-    "j" exist or the number of blocks in the block-diagonal matrix.
-
-    Parameters
-    ----------
-    N: Integer
-        The number of two-level systems.
-
-    Returns
-    -------
-    Nj: Integer
-        The number of Dicke ladders.
-    """
 
     return (N + 1) * 0.5 + (1 - mod(N, 2)) * 0.5
 end
 
 
+"""
+    num_tls(nds::Integer)
+
+Calculate the number of two-level systems.
+
+# Arguments
+- `nds` (`Integer`): The number of Dicke states.
+
+# Returns
+- `N` (`Integer`): The number of two-level systems.
+"""
 function num_tls(nds::Integer)::Integer
-    """Calculate the number of two-level systems.
-
-    Parameters
-    ----------
-    nds: Integer
-         The number of Dicke states.
-
-    Returns
-    -------
-    N: Integer
-        The number of two-level systems.
-    """
     if isinteger(sqrt(nds))
         # N is even
         N = 2 * (sqrt(nds) - 1)
@@ -69,20 +66,18 @@ function num_tls(nds::Integer)::Integer
     return trunc(Int, N)
 end
 
+"""
+    isdiagonal(mat::Union{AbstractMatrix,QuantumObject})
+
+Check if the input matrix is diagonal.
+
+# Arguments
+- `mat` (`AbstractMatrix` or `QuantumObject`): The matrix to check.
+
+# Returns
+- `diag` (`Bool`): `true` if the input matrix is diagonal, `false` otherwise.
+"""
 function isdiagonal(mat::Union{AbstractMatrix{T},QuantumObject})::Bool where {T}
-    """
-    Check if the input matrix is diagonal.
-
-    Parameters
-    ==========
-    mat: abstract array/QuantumObject
-        a Matrix
-
-    Returns
-    =======
-    diag: bool
-        True/False depending on whether the input matrix is diagonal.
-    """
 
 
     if mat isa QuantumObject
@@ -93,48 +88,50 @@ function isdiagonal(mat::Union{AbstractMatrix{T},QuantumObject})::Bool where {T}
 end
 
 
+"""
+    Dicke(N; hamiltonian=nothing, emission=0.0, dephasing=0.0, pumping=0.0,
+          collective_emission=0.0, collective_dephasing=0.0, collective_pumping=0.0)
+
+The Dicke structure which builds the Lindbladian and Liouvillian matrix of an
+ensemble of `N` identical two-level systems in the Dicke basis.
+
+The dynamics is given by the master equation
+
+```math
+\\dot{\\rho} = -i[H, \\rho]
+  + \\frac{\\gamma_\\text{E}}{2}\\sum_n \\mathcal{L}_{J_{-,n}}[\\rho]
+  + \\frac{\\gamma_\\text{D}}{2}\\sum_n \\mathcal{L}_{J_{z,n}}[\\rho]
+  + \\frac{\\gamma_\\text{P}}{2}\\sum_n \\mathcal{L}_{J_{+,n}}[\\rho]
+  + \\frac{\\gamma_\\text{CE}}{2}\\mathcal{L}_{J_{-}}[\\rho]
+  + \\frac{\\gamma_\\text{CD}}{2}\\mathcal{L}_{J_{z}}[\\rho]
+  + \\frac{\\gamma_\\text{CP}}{2}\\mathcal{L}_{J_{+}}[\\rho],
+```
+
+where the local rates act on each two-level system ``n`` and the collective
+rates act on the collective spin operators. Thanks to the permutational
+symmetry, the density matrix lives in a space of dimension ``O(N^2)``
+instead of ``2^N``.
+
+# Arguments
+- `N` (`Integer`): The number of two-level systems.
+- `hamiltonian` (`QuantumObject`): A Hamiltonian in the Dicke basis. The matrix dimensions are (nds, nds), with nds being the number of Dicke states. The Hamiltonian can be built with the operators given by the `jspin` functions.
+- `emission` (`Real`): Incoherent emission coefficient (also nonradiative emission). (default: 0.0).
+- `dephasing` (`Real`): Local dephasing coefficient. (default: 0.0).
+- `pumping` (`Real`): Incoherent pumping coefficient. (default: 0.0).
+- `collective_emission` (`Real`): Collective (superradiant) emission coefficient. (default: 0.0).
+- `collective_pumping` (`Real`): Collective pumping coefficient. (default: 0.0).
+- `collective_dephasing` (`Real`): Collective dephasing coefficient. (default: 0.0).
+
+# Example
+```julia
+using Piqs, QuantumToolbox
+N = 6
+jx, jy, jz = jspin(N)
+system = Dicke(N, hamiltonian=jz, emission=0.5, collective_emission=1.0)
+L = liouvillian_dicke(system)
+```
+"""
 mutable struct Dicke
-    """The Dicke stucture which builds the Lindbladian and Liouvillian matrix.
-
-    Parameters
-    ----------
-    N: int
-        The number of two-level systems.
-
-    hamiltonian: :QuantumObject
-        A Hamiltonian in the Dicke basis.
-
-        The matrix dimensions are (nds, nds), 
-        with nds being the number of Dicke states. 
-        The Hamiltonian can be built with the operators 
-        given by the `jspin` functions.
-
-    emission: float
-        Incoherent emission coefficient (also nonradiative emission).
-        default: 0.0
-
-    dephasing: float
-        Local dephasing coefficient.
-        default: 0.0
-
-    pumping: float
-        Incoherent pumping coefficient.
-        default: 0.0
-
-    collective_emission: float
-        Collective (superradiant) emmission coefficient.
-        default: 0.0
-
-    collective_pumping: float
-        Collective pumping coefficient.
-        default: 0.0
-
-    collective_dephasing: float
-        Collective dephasing coefficient.
-        default: 0.0
-
-
-    """
 
     N::Integer
     hamiltonian
@@ -148,7 +145,7 @@ mutable struct Dicke
     dshape
 
 
-    function Dicke(N; hamiltonian=Nothing, emission=0.0, dephasing=0.0, pumping=0.0, collective_emission=0.0, collective_dephasing=0.0, collective_pumping=0.0)
+    function Dicke(N; hamiltonian=nothing, emission=0.0, dephasing=0.0, pumping=0.0, collective_emission=0.0, collective_dephasing=0.0, collective_pumping=0.0)
         return new(N, hamiltonian, emission, dephasing, pumping, collective_emission, collective_dephasing, collective_pumping, num_dicke_states(N), (num_dicke_states(N), num_dicke_states(N)))
     end
 
@@ -179,42 +176,36 @@ function Base.show(io::IO, d::Dicke)
     end
 end
 
+"""
+    get_blocks(N::Integer)
+
+Calculate the number of cumulative elements at each block boundary.
+
+# Arguments
+- `N` (`Integer`): The number of two-level systems.
+
+# Returns
+- `blocks` (`Array`): An array with the number of cumulative elements at the boundary of each block.
+"""
 function get_blocks(N::Integer)
-    """
-    Calculate the number of cumulative elements at each block boundary.
-
-    Parameters
-    ----------
-    N: Integer
-        The number of two-level systems.
-
-    Returns
-    -------
-    blocks: Array
-        An array with the number of cumulative elements at the boundary of
-        each block.
-    """
     num_blocks = num_dicke_ladders(N)
     blocks = [i * (N + 2 - i) for i in range(1, num_blocks)]
     return blocks
 
 end
 
+"""
+    j_min(N::Integer)
+
+Calculate the minimum value of j for given N.
+
+# Arguments
+- `N` (`Integer`): Number of two-level systems.
+
+# Returns
+- `jmin` (`Real`): The minimum value of j for odd or even number of two level systems.
+"""
 function j_min(N::Integer)
-    """
-    Calculate the minimum value of j for given N.
-
-    Parameters
-    ----------
-    N: int
-        Number of two-level systems.
-
-    Returns
-    -------
-    jmin: float
-        The minimum value of j for odd or even number of two
-        level systems.
-    """
     if N % 2 == 0
         return 0
     else
@@ -222,63 +213,51 @@ function j_min(N::Integer)
     end
 end
 
+"""
+    j_vals(N::Integer)
+
+Get the valid values of j for given N.
+
+# Arguments
+- `N` (`Integer`): The number of two-level systems.
+
+# Returns
+- `jvals` (`Array`): The j values for given N as a 1D array.
+"""
 function j_vals(N::Integer)::Vector{Real}
-    """
-    Get the valid values of j for given N.
-
-    Parameters
-    ----------
-    N: Integer
-        The number of two-level systems.
-
-    Returns
-    -------
-    jvals: Array
-        The j values for given N as a 1D array.
-    """
     j = collect(j_min(N):1:(N/2))
     return j
 end
 
+"""
+    m_vals(j)
+
+Get all the possible values of m or m1 for given j.
+
+# Arguments
+- `N` (`Integer`): The number of two-level systems.
+
+# Returns
+- `mvals` (`Array`): The m values for given j as a 1D array.
+"""
 function m_vals(j)
-    """
-    Get all the possible values of m or m1 for given j.
-
-    Parameters
-    ----------
-    N: Integer
-        The number of two-level systems.
-
-    Returns
-    -------
-    mvals: Array
-        The m values for given j as a 1D array.
-    """
     return collect(-j:1:j)
 end
 
 
+"""
+    get_index(N, j, m, m1, blocks)
+
+Get the index in the density matrix for this j, m, m1 value.
+
+# Arguments
+- `N` (`Integer`): The number of two-level systems. j, m, m1: float The j, m, m1 values.
+- `blocks` (`Vector`): An 1D array with the number of cumulative elements at the boundary of each block.
+
+# Returns
+- `mvals` (`Vector`): The m values for given j.
+"""
 function get_index(N, j, m, m1, blocks)
-    """
-    Get the index in the density matrix for this j, m, m1 value.
-
-    Parameters
-    ----------
-    N: int
-        The number of two-level systems.
-
-    j, m, m1: float
-        The j, m, m1 values.
-
-    blocks: nd.ndarray
-        An 1D array with the number of cumulative elements at the boundary of
-        each block.
-
-    Returns
-    -------
-    mvals: array
-        The m values for given j.
-    """
     _k = Int(j - m1)
     _k_prime = Int(j - m)
     block_number = Int(N / 2 - j)
@@ -295,19 +274,20 @@ end
 
 
 
+"""
+    jmm1_dictionary(N::Number)
+
+Get the index in the density matrix for this j, m, m1 value.
+
+The (j, m, m1) values are mapped to the (i, k) index of a block
+diagonal matrix which has the structure to capture the permutationally
+symmetric part of the density matrix. For each (j, m, m1) value, first
+we get the block by using the "j" value and then the addition in the
+row/column due to the m and m1 is determined. Four dictionaries are
+returned giving a map from the (j, m, m1) values to (i, k), the inverse
+map, a flattened map and the inverse of the flattened map.
+"""
 function jmm1_dictionary(N::Number)
-
-    """
-    Get the index in the density matrix for this j, m, m1 value.
-
-    The (j, m, m1) values are mapped to the (i, k) index of a block
-    diagonal matrix which has the structure to capture the permutationally
-    symmetric part of the density matrix. For each (j, m, m1) value, first
-    we get the block by using the "j" value and then the addition in the
-    row/column due to the m and m1 is determined. Four dictionaries are
-    returned giving a map from the (j, m, m1) values to (i, k), the inverse
-    map, a flattened map and the inverse of the flattened mad.
-    """
 
     jmm1_dict::Dict = Dict()
     jmm1_flat::Dict = Dict()
@@ -335,37 +315,47 @@ end
 
 
 
+"""
+    pisolve(d::Dicke, initial_state::QuantumObject, tlist)
+
+Solve for diagonal Hamiltonians and initial states faster.
+
+When both the Hamiltonian and the initial density matrix are diagonal in the
+Dicke basis, the dynamics reduce to the populations only, ``\\dot{p} = M p``,
+which is integrated with the permutational invariant matrix [`Pim`](@ref).
+
+# Arguments
+- `d` (`Dicke`): The system. Its Hamiltonian, if any, must be diagonal.
+- `initial_state` (`QuantumObject`): A diagonal initial density matrix in the Dicke basis.
+- `tlist` (`AbstractVector`): The time steps to integrate over.
+
+# Returns
+- `result` (`TimeEvolutionSol`): The result of the evolution; the states are stored in `result.states`.
+
+# Throws
+- `ArgumentError` if the initial state or the Hamiltonian is not diagonal.
+
+# Example
+```julia
+using Piqs, QuantumToolbox
+N = 4
+system = Dicke(N, hamiltonian=jspin(N, op="z"), emission=0.1)
+rho0 = dicke(N, N / 2, N / 2)          # fully excited state
+sol = pisolve(system, rho0, LinRange(0, 10, 100))
+sol.states[end]
+```
+"""
 function pisolve(d::Dicke, initial_state::QuantumObject, tlist)
-    """
-    Solve for diagonal Hamiltonians and initial states faster.
-
-    Parameters
-    ==========
-    initial_state: :QuantumObject
-        An initial state specified as a density matrix of `qutip.Qbj` type
-
-    tlist: Vector
-        A 1D numpy array of list of timesteps to integrate
-
-    options: :Nothing
-        The options for the solver.
-
-    Returns
-    =======
-    result: Vector
-        A dictionary of the type `QuantumToolbox.results` which holds the
-        results of the evolution.
-    """
     if !isdiagonal(initial_state)
         msg = "`pisolve` requires a diagonal initial density matrix. "
-        msg *= "In general, construct the Liouvillian using `piqs.liouvillian`"
+        msg *= "In general, construct the Liouvillian using `liouvillian_dicke`"
         msg *= " and use QuantumToolbox.mesolve."
         throw(ArgumentError(msg))
     end
 
     if !isnothing(d.hamiltonian) && !isdiagonal(d.hamiltonian)
         msg = "`pisolve` should only be used for diagonal Hamiltonians. "
-        msg *= "Construct the Liouvillian using `piqs.liouvillian` and use"
+        msg *= "Construct the Liouvillian using `liouvillian_dicke` and use"
         msg *= " `QuantumToolbox.mesolve`."
         throw(ArgumentError(msg))
     end
@@ -379,21 +369,18 @@ function pisolve(d::Dicke, initial_state::QuantumObject, tlist)
     return result
 end
 
+"""
+    block_matrix(N::Integer)
+
+Construct the block-diagonal matrix for the Dicke basis.
+
+# Arguments
+- `N` (`Integer`): Number of two-level systems.
+
+# Returns
+- `block_matr` (`Matrix`): A 2D block-diagonal matrix of ones with dimension (nds, nds), where nds is the number of Dicke states for N two-level systems.
+"""
 function block_matrix(N::Integer)::Matrix{Int}
-    """Construct the block-diagonal matrix for the Dicke basis.
-
-    Parameters
-    ----------
-    N: int
-        Number of two-level systems.
-
-    Returns
-    -------
-    block_matr: Matrix
-        A 2D block-diagonal matrix of ones with dimension (nds, nds),
-        where nds is the number of Dicke states for N two-level
-        systems.
-    """
     nds = num_dicke_states(N)
     blocks_dimensions = Int(N ÷ 2 + 1 - 0.5 * (N % 2))
     blocks_list = [2 * (i + 1 * (N % 2)) + 1 * ((N + 1) % 2) for i in 0:(blocks_dimensions-1)]
@@ -408,28 +395,28 @@ function block_matrix(N::Integer)::Matrix{Int}
 end
 
 
-function c_ops(d::Dicke)::Vector
-    """Build collapse operators in the full Hilbert space 2^N.
+"""
+    c_ops(d::Dicke)
 
-    Returns
-    -------
-    c_ops_list: Vector
-        The list with the collapse operators in the 2^N Hilbert space.
-    """
+Build collapse operators in the full Hilbert space 2^N.
+
+# Returns
+- `c_ops_list` (`Vector`): The list with the collapse operators in the 2^N Hilbert space.
+"""
+function c_ops(d::Dicke)::Vector
     return collapse_uncoupled(d.N, emission=d.emission, dephasing=d.dephasing, pumping=d.pumping, collective_emission=d.collective_emission, collective_dephasing=d.collective_dephasing, collective_pumping=d.collective_pumping)
 end
 
-function coefficient_matrix(d::Dicke)
-    """Build coefficient matrix for ODE for a diagonal problem.
+"""
+    coefficient_matrix(d::Dicke)
 
-    Returns
-    -------
-    M: Matrix
-        The matrix M of the coefficients for the ODE dp/dt = M d.
-        p is the vector of the diagonal matrix elements
-        of the density matrix rho in the Dicke basis.  
-    """
-    return coefficient_matrix(Pim(N=d.N, emission=d.emission, dephasing=d.dephasing, pumping=d.pumping, collective_emission=d.collective_emission, collective_dephasing=d.collective_dephasing, collective_pumping=d.collective_pumping))
+Build coefficient matrix for ODE for a diagonal problem.
+
+# Returns
+- `M` (`Matrix`): The matrix M of the coefficients for the ODE dp/dt = M d. p is the vector of the diagonal matrix elements of the density matrix rho in the Dicke basis.
+"""
+function coefficient_matrix(d::Dicke)
+    return coefficient_matrix(Pim(d.N, emission=d.emission, dephasing=d.dephasing, pumping=d.pumping, collective_emission=d.collective_emission, collective_dephasing=d.collective_dephasing, collective_pumping=d.collective_pumping))
 end
 
 

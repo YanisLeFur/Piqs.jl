@@ -2,23 +2,18 @@ using SparseArrays, DifferentialEquations
 export Pim, isdicke, tau_valid, calculate_k, calculate_j_m, coefficient_matrix, solve, tau1, tau2, tau3, tau4, tau5, tau6, tau7, tau8, tau9, tau_column
 
 
+"""
+    tau_column(tau::String, k::Integer, j::Number)
+
+Determine the column index for the non-zero elements of the matrix for a
+particular row `k` and the value of `j` from the Dicke space.
+
+# Arguments
+- `tau` (`String`): The tau function to check for this `k` and `j`.
+- `k` (`Integer`): The row of the matrix M for which the non zero elements have to be calculated.
+- `j` (`Real`): The value of `j` for this row.
+"""
 function tau_column(tau::String, k::Integer, j::Number)
-    """
-    Determine the column index for the non-zero elements of the matrix for a
-    particular row `k` and the value of `j` from the Dicke space.
-
-    Parameters
-    ----------
-    tau: str
-        The tau function to check for this `k` and `j`.
-
-    k: Integer
-        The row of the matrix M for which the non zero elements have
-        to be calculated.
-
-    j: float
-        The value of `j` for this row.
-    """
     # In the notes, we indexed from k = 1, here we do it from k = 0
     k = k + 1
     mapping = Dict("tau3" => k - (2 * j + 3),
@@ -35,77 +30,36 @@ function tau_column(tau::String, k::Integer, j::Number)
 end
 
 
+"""
+    Pim
+
+The Permutation Invariant Matrix class.
+
+Initialize the class with the parameters for generating a Permutation
+Invariant matrix which evolves a given diagonal initial state `p` as:
+
+                            dp/dt = Mp
+
+# Arguments
+- `N` (`Integer`): The number of two-level systems.
+- `emission` (`Real`): Incoherent emission coefficient (also nonradiative emission). (default: 0.0).
+- `dephasing` (`Real`): Local dephasing coefficient. (default: 0.0).
+- `pumping` (`Real`): Incoherent pumping coefficient. (default: 0.0).
+- `collective_emission` (`Real`): Collective (superradiant) emission coefficient. (default: 0.0).
+- `collective_pumping` (`Real`): Collective pumping coefficient. (default: 0.0).
+- `collective_dephasing` (`Real`): Collective dephasing coefficient. (default: 0.0).
+
+# Fields
+- `N` (`Integer`): The number of two-level systems.
+- `emission` (`Real`): Incoherent emission coefficient (also nonradiative emission). (default: 0.0).
+- `dephasing` (`Real`): Local dephasing coefficient. (default: 0.0).
+- `pumping` (`Real`): Incoherent pumping coefficient. (default: 0.0).
+- `collective_emission` (`Real`): Collective (superradiant) emission coefficient. (default: 0.0).
+- `collective_dephasing` (`Real`): Collective dephasing coefficient. (default: 0.0).
+- `collective_pumping` (`Real`): Collective pumping coefficient. (default: 0.0).
+- `M` (`Dict`): A nested dictionary of the structure {row: {col: val}} which holds non zero elements of the matrix M
+"""
 mutable struct Pim
-    """
-    The Permutation Invariant Matrix class.
-
-    Initialize the class with the parameters for generating a Permutation
-    Invariant matrix which evolves a given diagonal initial state `p` as:
-
-                                dp/dt = Mp
-
-    Parameters
-    ----------
-    N: int
-        The number of two-level systems.
-
-    emission: Float
-        Incoherent emission coefficient (also nonradiative emission).
-        default: 0.0
-
-    dephasing: Float
-        Local dephasing coefficient.
-        default: 0.0
-
-    pumping: Float
-        Incoherent pumping coefficient.
-        default: 0.0
-
-    collective_emission: Float
-        Collective (superradiant) emmission coefficient.
-        default: 0.0
-
-    collective_pumping: Float
-        Collective pumping coefficient.
-        default: 0.0
-
-    collective_dephasing: Float
-        Collective dephasing coefficient.
-        default: 0.0
-
-    Attributes
-    ----------
-    N: int
-        The number of two-level systems.
-
-    emission: Float
-        Incoherent emission coefficient (also nonradiative emission).
-        default: 0.0
-
-    dephasing: Float
-        Local dephasing coefficient.
-        default: 0.0
-
-    pumping: Float
-        Incoherent pumping coefficient.
-        default: 0.0
-
-    collective_emission: Float
-        Collective (superradiant) emmission coefficient.
-        default: 0.0
-
-    collective_dephasing: Float
-        Collective dephasing coefficient.
-        default: 0.0
-
-    collective_pumping: Float
-        Collective pumping coefficient.
-        default: 0.0
-
-    M: Dict
-        A nested dictionary of the structure {row: {col: val}} which holds
-        non zero elements of the matrix M
-    """
     N::Integer
     emission::Number
     dephasing::Number
@@ -122,22 +76,19 @@ mutable struct Pim
     end
 end
 
+"""
+    isdicke(p::Pim, dicke_row::Integer, dicke_col::Integer)
+
+Check if an element in a matrix is a valid element in the Dicke space.
+Dicke row: j value index. Dicke column: m value index.
+The function returns True if the element exists in the Dicke space and
+False otherwise.
+
+# Arguments
+- `dicke_row` (`Integer`): Row index of the element in Dicke space which needs to be checked.
+- `dicke_col` (`Integer`): Column index of the element in Dicke space which needs to be checked.
+"""
 function isdicke(p::Pim, dicke_row::Integer, dicke_col::Integer)::Bool
-    """
-    Check if an element in a matrix is a valid element in the Dicke space.
-    Dicke row: j value index. Dicke column: m value index.
-    The function returns True if the element exists in the Dicke space and
-    False otherwise.
-
-    Parameters
-    ----------
-    dicke_row : Integer
-        Row index of the element in Dicke space which needs to be checked.
-
-    dicke_col : Integer
-        Column index of the element in Dicke space which needs to be
-        checked.
-    """
     rows = p.N + 1
     cols = 0
 
@@ -159,28 +110,22 @@ function isdicke(p::Pim, dicke_row::Integer, dicke_col::Integer)::Bool
 
 end
 
+"""
+    tau_valid(p::Pim, dicke_row::Integer, dicke_col::Integer)
+
+Find the Tau functions which are valid for this value of (dicke_row,
+dicke_col) given the number of TLS. This calculates the valid tau
+values and returns a dictionary specifying the tau function name and
+the value.
+
+# Arguments
+- `dicke_row` (`Integer`): Row index of the element in Dicke space which needs to be checked.
+- `dicke_col` (`Integer`): Column index of the element in Dicke space which needs to be checked.
+
+# Returns
+- `taus` (`Dict`): A dictionary of key, val as (tau=> value) consisting of the valid taus for this row and column of the Dicke space element.
+"""
 function tau_valid(p::Pim, dicke_row::Integer, dicke_col::Integer)::Union{Dict,Bool}
-    """
-    Find the Tau functions which are valid for this value of (dicke_row,
-    dicke_col) given the number of TLS. This calculates the valid tau
-    values and reurns a dictionary specifying the tau function name and
-    the value.
-
-    Parameters
-    ----------
-    dicke_row : Integer
-        Row index of the element in Dicke space which needs to be checked.
-
-    dicke_col : Integer
-        Column index of the element in Dicke space which needs to be
-        checked.
-
-    Returns
-    -------
-    taus: Dict
-        A dictionary of key, val as (tau=> value) consisting of the valid
-        taus for this row and column of the Dicke space element.
-    """
     tau_functions = [tau3, tau2, tau4,
         tau5, tau1, tau6,
         tau7, tau8, tau9]
@@ -200,49 +145,39 @@ function tau_valid(p::Pim, dicke_row::Integer, dicke_col::Integer)::Union{Dict,B
     return taus
 end
 
+"""
+    calculate_j_m(p::Pim, dicke_row::Integer, dicke_col::Integer)
+
+Get the value of j and m for the particular Dicke space element.
+
+# Arguments
+- `dicke_row` (`Integer`): Row index of the element in Dicke space which needs to be checked.
+- `dicke_col` (`Integer`): Column index of the element in Dicke space which needs to be checked.
+
+# Returns
+j, m: Float
+The j and m values.
+"""
 function calculate_j_m(p::Pim, dicke_row::Integer, dicke_col::Integer)::Tuple{Number,Number}
-    """
-    Get the value of j and m for the particular Dicke space element.
-
-    Parameters
-    ----------
-    dicke_row : int
-        Row index of the element in Dicke space which needs to be checked.
-
-    dicke_col : int
-        Column index of the element in Dicke space which needs to be
-        checked.
-
-    Returns
-    -------
-    j, m: Float
-        The j and m values.
-    """
     N = p.N
     j = N / 2 - dicke_col
     m = N / 2 - dicke_row
     return (j, m)
 end
 
+"""
+    calculate_k(p::Pim, dicke_row::Integer, dicke_col::Integer)
+
+Get k value from the current row and column element in the Dicke space.
+
+# Arguments
+- `dicke_row` (`Integer`): Row index of the element in Dicke space which needs to be checked.
+- `dicke_col` (`Integer`): Column index of the element in Dicke space which needs to be checked.
+
+# Returns
+- `k` (`Integer`): The row index for the matrix M for given Dicke space element
+"""
 function calculate_k(p::Pim, dicke_row::Integer, dicke_col::Integer)::Integer
-    """
-    Get k value from the current row and column element in the Dicke space.
-
-    Parameters
-    ----------
-    dicke_row : int
-        Row index of the element in Dicke space which needs to be checked.
-
-    dicke_col : int
-        Column index of the element in Dicke space which needs to be
-        checked.
-
-    Returns
-    -------
-    k: int
-        The row index for the matrix M for given Dicke space
-        element
-    """
     N = p.N
     if dicke_row == 0
         return dicke_col
@@ -251,13 +186,15 @@ function calculate_k(p::Pim, dicke_row::Integer, dicke_col::Integer)::Integer
     end
 end
 
-function coefficient_matrix(p::Pim)
-    """
-    Generate the matrix M governing the dynamics for diagonal cases.
+"""
+    coefficient_matrix(p::Pim)
 
-    If the initial density matrix and the Hamiltonian is diagonal, the
-    evolution of the system is given by the simple ODE: dp/dt = Mp.
-    """
+Generate the matrix M governing the dynamics for diagonal cases.
+
+If the initial density matrix and the Hamiltonian is diagonal, the
+evolution of the system is given by the simple ODE: dp/dt = Mp.
+"""
+function coefficient_matrix(p::Pim)
     N = p.N
     nds = num_dicke_states(N)
     rows = p.N
@@ -278,17 +215,19 @@ function coefficient_matrix(p::Pim)
     return sparse_M
 end
 
+"""
+    solve(p::Pim, rho0, tlist)
+
+Solve the ODE for the evolution of diagonal states and Hamiltonians.
+"""
 function solve(p::Pim, rho0, tlist)
-    """
-    Solve the ODE for the evolution of diagonal states and Hamiltonians.
-    """
 
     L = coefficient_matrix(p)
     rhs_generate(y, p, t) = L * y
     rho0_flat = (diag(rho0))
     rhs_generate(rho0_flat, 0, 0)
     prob = ODEProblem(rhs_generate, rho0_flat, (tlist[1], tlist[end]))
-    sol = DifferentialEquations.solve(prob, Tsit5())
+    sol = DifferentialEquations.solve(prob, Tsit5(), saveat=tlist)
     output_states = [Qobj(diagm(sol.u[1]))]
     for r in sol.u[2:end]
         diag = diagm(r)
@@ -301,10 +240,12 @@ function solve(p::Pim, rho0, tlist)
 
 end
 
+"""
+    tau1(p::Pim, j, m)
+
+Calculate the element of the coefficient matrix relative to p_jmm.
+"""
 function tau1(p::Pim, j, m)
-    """
-    Calculate the element of the coefficient matrix relative to p_jmm.
-    """
     yS = p.collective_emission
     yL = p.emission
     yD = p.dephasing
@@ -324,10 +265,12 @@ function tau1(p::Pim, j, m)
     return -(spontaneous + losses + pump + dephase + collective_pump)
 end
 
+"""
+    tau2(p::Pim, j, m)
+
+Calculate the element of the coefficient matrix relative to p_jm+1m+1.
+"""
 function tau2(p::Pim, j, m)
-    """
-    Calculate the element of the coefficient matrix relative to p_jm+1m+1.
-    """
     yS = p.collective_emission
     yL = p.emission
     N = 1.0 * (p.N)
@@ -337,10 +280,12 @@ function tau2(p::Pim, j, m)
     return spontaneous + losses
 end
 
+"""
+    tau3(p::Pim, j, m)
+
+Calculate the element of the coefficient matrix relative to p_j+1m+1m+1.
+"""
 function tau3(p::Pim, j, m)
-    """
-    Calculate the element of the coefficient matrix relative to p_j+1m+1m+1.
-    """
     yL = p.emission
     N = 1.0 * (p.N)
     num = (j + m - 1) * (j + m) * (j + 1 + N / 2)
@@ -349,10 +294,12 @@ function tau3(p::Pim, j, m)
     return yL * (num / den)
 end
 
+"""
+    tau4(p::Pim, j, m)
+
+Calculate the element of the coefficient matrix relative to p_j-1m+1m+1.
+"""
 function tau4(p::Pim, j, m)
-    """
-    Calculate the element of the coefficient matrix relative to p_j-1m+1m+1.
-    """
     yL = p.emission
     N = 1.0 * (p.N)
     num = (j - m + 1) * (j - m + 2) * (N / 2 - j)
@@ -361,10 +308,12 @@ function tau4(p::Pim, j, m)
     return t4
 end
 
+"""
+    tau5(p::Pim, j, m)
+
+Calculate the element of the coefficient matrix relative to p_j+1mm.
+"""
 function tau5(p::Pim, j, m)
-    """
-    Calculate the element of the coefficient matrix relative to p_j+1mm.
-    """
     yD = p.dephasing
     N = 1.0 * (p.N)
     num = (j - m) * (j + m) * (j + 1 + N / 2)
@@ -373,10 +322,12 @@ function tau5(p::Pim, j, m)
     return t5
 end
 
+"""
+    tau6(p::Pim, j, m)
+
+Calculate the element of the coefficient matrix relative to p_j-1mm.
+"""
 function tau6(p::Pim, j, m)
-    """
-    Calculate the element of the coefficient matrix relative to p_j-1mm.
-    """
     yD = p.dephasing
     N = 1.0 * (p.N)
     num = (j - m + 1) * (j + m + 1) * (N / 2 - j)
@@ -384,10 +335,12 @@ function tau6(p::Pim, j, m)
     return yD * (num / den)
 end
 
+"""
+    tau7(p::Pim, j, m)
+
+Calculate the element of the coefficient matrix relative to p_j+1m-1m-1.
+"""
 function tau7(p::Pim, j, m)
-    """
-    Calculate the element of the coefficient matrix relative to p_j+1m-1m-1.
-    """
     yP = p.pumping
     N = 1.0 * (p.N)
     num = (j - m - 1) * (j - m) * (j + 1 + N / 2)
@@ -395,10 +348,12 @@ function tau7(p::Pim, j, m)
     return yP * (float(num) / den)
 end
 
+"""
+    tau8(p::Pim, j, m)
+
+Calculate the element of the coefficient matrix relative to p_jm-1m-1.
+"""
 function tau8(p::Pim, j, m)
-    """
-    Calculate the element of the coefficient matrix relative to p_jm-1m-1.
-    """
     yP = p.pumping
     yCP = p.collective_pumping
     N = 1.0 * (p.N)
@@ -410,10 +365,12 @@ function tau8(p::Pim, j, m)
     return pump + collective_pump
 end
 
+"""
+    tau9(p::Pim, j, m)
+
+Calculate the element of the coefficient matrix relative to p_j-1m-1m-1.
+"""
 function tau9(p::Pim, j, m)
-    """
-    Calculate the element of the coefficient matrix relative to p_j-1m-1m-1.
-    """
     yP = p.pumping
     N = 1.0 * p.N
     num = (j + m + 1) * (j + m + 2) * (N / 2 - j)
