@@ -1,10 +1,10 @@
 # Getting started
 
-This page introduces the main objects of Piqs.jl. All the code blocks are run when the
+This page introduces the main objects of PIQSolver.jl. All the code blocks are run when the
 documentation is built, so the outputs shown are real.
 
 ```@example start
-using Piqs, QuantumToolbox
+using PIQSolver, QuantumToolbox
 ```
 
 ## The Dicke basis

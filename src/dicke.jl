@@ -124,7 +124,7 @@ instead of ``2^N``.
 
 # Example
 ```julia
-using Piqs, QuantumToolbox
+using PIQSolver, QuantumToolbox
 N = 6
 jx, jy, jz = jspin(N)
 system = Dicke(N, hamiltonian=jz, emission=0.5, collective_emission=1.0)
@@ -337,7 +337,7 @@ which is integrated with the permutational invariant matrix [`Pim`](@ref).
 
 # Example
 ```julia
-using Piqs, QuantumToolbox
+using PIQSolver, QuantumToolbox
 N = 4
 system = Dicke(N, hamiltonian=jspin(N, op="z"), emission=0.1)
 rho0 = dicke(N, N / 2, N / 2)          # fully excited state
@@ -382,16 +382,18 @@ Construct the block-diagonal matrix for the Dicke basis.
 """
 function block_matrix(N::Integer)::Matrix{Int}
     nds = num_dicke_states(N)
-    blocks_dimensions = Int(N ÷ 2 + 1 - 0.5 * (N % 2))
+    blocks_dimensions = num_dicke_ladders(N)
     blocks_list = [2 * (i + 1 * (N % 2)) + 1 * ((N + 1) % 2) for i in 0:(blocks_dimensions-1)]
     blocks_list = reverse(blocks_list)
 
-    square_blocks = []
+    block_matr = zeros(Int, nds, nds)
+    offset = 0
     for i in blocks_list
-        push!(square_blocks, ones(Int, i, i))
+        block_matr[offset+1:offset+i, offset+1:offset+i] .= 1
+        offset += i
     end
 
-    return reduce(hcat, [reduce(vcat, square_blocks[i:end]) for i in 1:length(square_blocks)])
+    return block_matr
 end
 
 

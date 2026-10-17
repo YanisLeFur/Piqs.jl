@@ -41,7 +41,7 @@ The subsystems may have different dimensions. This is the equivalent of
 
 # Example
 ```julia
-using Piqs, QuantumToolbox
+using PIQSolver, QuantumToolbox
 a = destroy(2)
 b = destroy(3)
 L_a = liouvillian(a' * a, [a])

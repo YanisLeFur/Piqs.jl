@@ -1,16 +1,16 @@
 using Documenter
 using DocumenterVitepress
-using Piqs
+using PIQSolver
 
 makedocs(;
     format=DocumenterVitepress.MarkdownVitepress(
-        repo="github.com/YanisLeFur/Piqs.jl",
+        repo="github.com/YanisLeFur/PIQSolver.jl",
         devbranch="main",
         devurl="dev",
     ),
-    sitename="Piqs.jl",
+    sitename="PIQSolver.jl",
     authors="Yanis Le Fur",
-    modules=[Piqs],
+    modules=[PIQSolver],
     checkdocs=:exports,
     pages=[
         "Home" => "index.md",
@@ -22,7 +22,7 @@ makedocs(;
 
 
 DocumenterVitepress.deploydocs(;
-    repo="github.com/YanisLeFur/Piqs.jl",
+    repo="github.com/YanisLeFur/PIQSolver.jl",
     target=joinpath(@__DIR__, "build"),
     devbranch="main",
     branch="gh-pages",

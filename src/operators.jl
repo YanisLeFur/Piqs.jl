@@ -62,7 +62,7 @@ This is the [`lindbladian`](@ref) of `d` plus the coherent part
 
 # Example
 ```julia
-using Piqs, QuantumToolbox
+using PIQSolver, QuantumToolbox
 N = 4
 system = Dicke(N, hamiltonian=jspin(N, op="x"), collective_emission=1.0)
 L = liouvillian_dicke(system)
@@ -277,7 +277,7 @@ function _jspin_uncoupled(N::Integer, op::Union{String,Nothing}=nothing)
            op == "z" ? jz :
            op == "+" ? jp :
            op == "-" ? jm :
-           throw(TypeError("Invalid operator type: $op"))
+           throw(DomainError("Invalid operator type: $op"))
 end
 
 
@@ -300,7 +300,7 @@ default. Otherwise with "uncoupled" the operators are in a
 
 # Example
 ```julia
-using Piqs
+using PIQSolver
 jx, jy, jz = jspin(4)                      # Dicke basis, 9×9 matrices
 jp = jspin(4, op="+")
 jz_full = jspin(4, op="z", basis="uncoupled")  # 2^4 = 16 dimensional
@@ -388,7 +388,7 @@ function collapse_uncoupled(N::Integer; emission::Union{AbstractFloat,Integer}=0
     N = trunc(Int, N)
 
     if N > 10
-        @warn "N > 10. dim(H) = 2^N. Better use `Piqs.lindbladian` to reduce Hilbert space dimension and exploit permutational symmetry."
+        @warn "N > 10. dim(H) = 2^N. Better use `PIQSolver.lindbladian` to reduce Hilbert space dimension and exploit permutational symmetry."
     end
 
     sz = spin_algebra(N)[3]

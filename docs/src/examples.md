@@ -9,7 +9,7 @@ light (superradiance). The peak intensity scales as ``N^2``, instead of ``N`` fo
 independent emitters.
 
 ```@example superradiance
-using Piqs, QuantumToolbox
+using PIQSolver, QuantumToolbox
 
 N = 20
 jz = jspin(N, op="z")
@@ -56,7 +56,7 @@ drive ``\Omega > N\gamma_\text{CE}/2``, the ensemble no longer stays polarized
 (``\langle J_z\rangle \to 0``):
 
 ```@example driven
-using Piqs, QuantumToolbox
+using PIQSolver, QuantumToolbox
 
 N = 10
 jx, jy, jz = jspin(N)
@@ -78,7 +78,7 @@ with the [`Pim`](@ref) matrix ``M``, and gives the same result as the full maste
 equation:
 
 ```@example pim
-using Piqs, QuantumToolbox
+using PIQSolver, QuantumToolbox
 
 N = 6
 jz = jspin(N, op="z")
@@ -108,7 +108,7 @@ brute-force simulation in the full ``2^N`` dimensional space. [`c_ops`](@ref) (o
 [`collapse_uncoupled`](@ref)) builds the corresponding collapse operators:
 
 ```@example uncoupled
-using Piqs, QuantumToolbox
+using PIQSolver, QuantumToolbox
 
 N = 4
 rates = (emission=0.3, dephasing=0.2, collective_emission=1.0)
@@ -138,7 +138,7 @@ dimensions (`nds` Dicke states and `nphot` photon states). We then add the
 Tavis–Cummings interaction ``g(J_+ a + J_- a^\dagger)``.
 
 ```@example cavity
-using Piqs, QuantumToolbox
+using PIQSolver, QuantumToolbox
 
 N = 6
 nphot = 10

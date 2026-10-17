@@ -1,4 +1,7 @@
-using SparseArrays, DifferentialEquations
+using SparseArrays
+using OrdinaryDiffEqTsit5: ODEProblem, Tsit5
+# `solve(::Pim, ...)` is a method of the SciML `solve`, so it does not clash with OrdinaryDiffEq
+import OrdinaryDiffEqTsit5: solve
 export Pim, isdicke, tau_valid, calculate_k, calculate_j_m, coefficient_matrix, solve, tau1, tau2, tau3, tau4, tau5, tau6, tau7, tau8, tau9, tau_column
 
 
@@ -227,7 +230,7 @@ function solve(p::Pim, rho0, tlist)
     rho0_flat = (diag(rho0))
     rhs_generate(rho0_flat, 0, 0)
     prob = ODEProblem(rhs_generate, rho0_flat, (tlist[1], tlist[end]))
-    sol = DifferentialEquations.solve(prob, Tsit5(), saveat=tlist)
+    sol = solve(prob, Tsit5(), saveat=tlist)
     output_states = [Qobj(diagm(sol.u[1]))]
     for r in sol.u[2:end]
         diag = diagm(r)

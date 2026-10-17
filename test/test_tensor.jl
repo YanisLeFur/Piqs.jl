@@ -116,3 +116,10 @@ end
     @test_throws ArgumentError permutedims(A, (3, 2))
 end
 
+
+@testset "SparseTensor - Overwrite existing value" begin
+    A = SparseTensor([1.0], [(1, 1)], (2, 2))
+    A[1, 1] = 7.0
+    @test A[1, 1] == 7.0
+    @test length(A.values) == 1
+end

@@ -1,6 +1,6 @@
-# Piqs.jl
+# PIQSolver.jl
 
-**Piqs.jl** (Permutational Invariant Quantum Solver) is a Julia package to study the
+**PIQSolver.jl** (Permutational Invariant Quantum Solver) is a Julia package to study the
 open-system dynamics of ensembles of ``N`` identical two-level systems (spins, qubits,
 atoms, ...) that are invariant under permutations of the two-level systems.
 
@@ -10,7 +10,7 @@ dephasing) are symmetric under the exchange of any two systems, the dynamics can
 written in the **Dicke basis** ``|j, m\rangle``. The required space then grows only as
 ``O(N^2)``, so ensembles of hundreds of two-level systems can be simulated exactly.
 
-Piqs.jl is a Julia port of [PIQS](https://github.com/nathanshammah/piqs), originally
+PIQSolver.jl is a Julia port of [PIQS](https://github.com/nathanshammah/piqs), originally
 developed in Python by Nathan Shammah and Shahnawaz Ahmed and now part of
 [QuTiP](https://qutip.org). It is built on top of
 [QuantumToolbox.jl](https://github.com/qutip/QuantumToolbox.jl): every operator, state
@@ -21,10 +21,10 @@ and Liouvillian it returns is a `QuantumObject`, so you can pass it directly to
 
 ```julia
 using Pkg
-Pkg.add("Piqs")
+Pkg.add("PIQSolver")
 ```
 
-Piqs.jl is meant to be used together with QuantumToolbox.jl:
+PIQSolver.jl is meant to be used together with QuantumToolbox.jl:
 
 ```julia
 Pkg.add("QuantumToolbox")
@@ -35,7 +35,7 @@ Pkg.add("QuantumToolbox")
 Superradiant decay of ``N = 10`` initially excited two-level systems:
 
 ```julia
-using Piqs, QuantumToolbox
+using PIQSolver, QuantumToolbox
 
 N = 10
 jz = jspin(N, op="z")
@@ -71,7 +71,7 @@ worked examples.
 
 ## Citing
 
-If you use Piqs.jl in your research, please cite the original PIQS paper:
+If you use PIQSolver.jl in your research, please cite the original PIQS paper:
 
 > N. Shammah, S. Ahmed, N. Lambert, S. De Liberato and F. Nori,
 > *Open quantum systems with local and collective incoherent processes: Efficient numerical
