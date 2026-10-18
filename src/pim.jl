@@ -60,23 +60,23 @@ Invariant matrix which evolves a given diagonal initial state `p` as:
 - `collective_emission` (`Real`): Collective (superradiant) emission coefficient. (default: 0.0).
 - `collective_dephasing` (`Real`): Collective dephasing coefficient. (default: 0.0).
 - `collective_pumping` (`Real`): Collective pumping coefficient. (default: 0.0).
-- `M` (`Dict`): A nested dictionary of the structure {row: {col: val}} which holds non zero elements of the matrix M
 """
-mutable struct Pim
-    N::Integer
-    emission::Number
-    dephasing::Number
-    pumping::Number
-    collective_emission::Number
-    collective_dephasing::Number
-    collective_pumping::Number
-    M::Dict
+struct Pim{T<:Real}
+    N::Int
+    emission::T
+    dephasing::T
+    pumping::T
+    collective_emission::T
+    collective_dephasing::T
+    collective_pumping::T
+end
 
-    function Pim(N::Integer; emission::Number=0.0, dephasing::Number=0, pumping::Number=0,
-        collective_emission::Number=0, collective_pumping::Number=0,
-        collective_dephasing::Number=0)
-        return new(N, emission, dephasing, pumping, collective_emission, collective_dephasing, collective_pumping, Dict())
-    end
+function Pim(N::Integer; emission::Real=0.0, dephasing::Real=0.0, pumping::Real=0.0,
+    collective_emission::Real=0.0, collective_pumping::Real=0.0,
+    collective_dephasing::Real=0.0)
+    rates = promote(float(emission), float(dephasing), float(pumping),
+        float(collective_emission), float(collective_dephasing), float(collective_pumping))
+    return Pim{eltype(rates)}(N, rates...)
 end
 
 """

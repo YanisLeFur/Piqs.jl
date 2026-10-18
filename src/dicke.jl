@@ -15,12 +15,12 @@ Calculate number of Dicke states
 # Returns
 - `nds` (`Integer`): The number of Dicke states.
 """
-function num_dicke_states(N::Integer)::Integer
+function num_dicke_states(N::Integer)::Int
     if (N < 1)
         throw(DomainError(N, "The number of states must be greater than one."))
     end
-    return (N / 2 + 1)^2 - (N % 2) / 4
-
+    # (N/2 + 1)^2 - (N % 2)/4, in integer arithmetic
+    return div((N + 2)^2 - N % 2, 4)
 end
 
 
@@ -38,9 +38,8 @@ For a collection of N two-level systems it counts how many different
 # Returns
 - `Nj` (`Integer`): The number of Dicke ladders.
 """
-function num_dicke_ladders(N::Integer)::Integer
-
-    return (N + 1) * 0.5 + (1 - mod(N, 2)) * 0.5
+function num_dicke_ladders(N::Integer)::Int
+    return div(N, 2) + 1
 end
 
 
@@ -131,24 +130,25 @@ system = Dicke(N, hamiltonian=jz, emission=0.5, collective_emission=1.0)
 L = liouvillian_dicke(system)
 ```
 """
-mutable struct Dicke
+struct Dicke{T<:Real,H}
+    N::Int
+    hamiltonian::H
+    emission::T
+    dephasing::T
+    pumping::T
+    collective_emission::T
+    collective_dephasing::T
+    collective_pumping::T
+    nds::Int
+    dshape::Tuple{Int,Int}
+end
 
-    N::Integer
-    hamiltonian
-    emission::Number
-    dephasing::Number
-    pumping::Number
-    collective_emission::Number
-    collective_dephasing::Number
-    collective_pumping::Number
-    nds
-    dshape
-
-
-    function Dicke(N; hamiltonian=nothing, emission=0.0, dephasing=0.0, pumping=0.0, collective_emission=0.0, collective_dephasing=0.0, collective_pumping=0.0)
-        return new(N, hamiltonian, emission, dephasing, pumping, collective_emission, collective_dephasing, collective_pumping, num_dicke_states(N), (num_dicke_states(N), num_dicke_states(N)))
-    end
-
+function Dicke(N::Integer; hamiltonian=nothing, emission::Real=0.0, dephasing::Real=0.0, pumping::Real=0.0,
+    collective_emission::Real=0.0, collective_dephasing::Real=0.0, collective_pumping::Real=0.0)
+    rates = promote(float(emission), float(dephasing), float(pumping),
+        float(collective_emission), float(collective_dephasing), float(collective_pumping))
+    nds = num_dicke_states(N)
+    return Dicke{eltype(rates),typeof(hamiltonian)}(N, hamiltonian, rates..., nds, (nds, nds))
 end
 
 function Base.show(io::IO, d::Dicke)
@@ -207,7 +207,7 @@ Calculate the minimum value of j for given N.
 """
 function j_min(N::Integer)
     if N % 2 == 0
-        return 0
+        return 0.0
     else
         return 0.5
     end
@@ -224,9 +224,8 @@ Get the valid values of j for given N.
 # Returns
 - `jvals` (`Array`): The j values for given N as a 1D array.
 """
-function j_vals(N::Integer)::Vector{Real}
-    j = collect(j_min(N):1:(N/2))
-    return j
+function j_vals(N::Integer)::Vector{Float64}
+    return collect(j_min(N):1:(N/2))
 end
 
 """
