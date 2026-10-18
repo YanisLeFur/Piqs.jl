@@ -224,24 +224,17 @@ end
 Solve the ODE for the evolution of diagonal states and Hamiltonians.
 """
 function solve(p::Pim, rho0, tlist)
-
     L = coefficient_matrix(p)
-    rhs_generate(y, p, t) = L * y
-    rho0_flat = (diag(rho0))
-    rhs_generate(rho0_flat, 0, 0)
-    prob = ODEProblem(rhs_generate, rho0_flat, (tlist[1], tlist[end]))
+    rho0_flat = diag(rho0)
+    prob = ODEProblem(_pim_rhs!, rho0_flat, (tlist[1], tlist[end]), L)
     sol = solve(prob, Tsit5(), saveat=tlist)
-    output_states = [Qobj(diagm(sol.u[1]))]
-    for r in sol.u[2:end]
-        diag = diagm(r)
-        push!(output_states, Qobj(diag))
-    end
-    output_states[end]
-    output = TimeEvolutionSol(tlist, sol.t, output_states, nothing, sol.retcode, sol.alg, NaN, NaN)
-
-    return output
-
+    # the states stay diagonal, so store them sparse instead of as dense nds × nds matrices
+    dims = rho0 isa QuantumObject ? rho0.dims : size(rho0, 1)
+    output_states = [Qobj(spdiagm(0 => r), dims=dims) for r in sol.u]
+    return TimeEvolutionSol(tlist, sol.t, output_states, nothing, sol.retcode, sol.alg, NaN, NaN)
 end
+
+_pim_rhs!(dp, p, M, t) = mul!(dp, M, p)
 
 """
     tau1(p::Pim, j, m)
