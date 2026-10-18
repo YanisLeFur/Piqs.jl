@@ -200,22 +200,40 @@ evolution of the system is given by the simple ODE: dp/dt = Mp.
 function coefficient_matrix(p::Pim)
     N = p.N
     nds = num_dicke_states(N)
-    rows = p.N
-    cols = div(N, 2) + 1
-    sparse_M = spzeros(Float64, nds, nds)
-    for dicke_row in 0:rows, dicke_col in 0:cols
-        if isdicke(p, dicke_row, dicke_col)
-            k = calculate_k(p, dicke_row, dicke_col)
-            taus = tau_valid(p, dicke_row, dicke_col)
-            for (tau, value) in taus
-                j, m = calculate_j_m(p, dicke_row, dicke_col)
-                current_col = tau_column(tau, k, j)
-                sparse_M[k+1, trunc(Int, current_col)+1] = value
-            end
-        end
+    max_entries = 9 * nds
+    M_row = sizehint!(Int[], max_entries)
+    M_col = sizehint!(Int[], max_entries)
+    M_data = sizehint!(Float64[], max_entries)
+    entries = (M_row, M_col, M_data)
+
+    for dicke_row in 0:N, dicke_col in 0:(div(N, 2)+1)
+        isdicke(p, dicke_row, dicke_col) || continue
+        k = calculate_k(p, dicke_row, dicke_col) + 1
+        _push_tau!(entries, p, tau3, k, dicke_row - 1, dicke_col - 1)
+        _push_tau!(entries, p, tau2, k, dicke_row - 1, dicke_col)
+        _push_tau!(entries, p, tau4, k, dicke_row - 1, dicke_col + 1)
+        _push_tau!(entries, p, tau5, k, dicke_row, dicke_col - 1)
+        _push_tau!(entries, p, tau1, k, dicke_row, dicke_col)
+        _push_tau!(entries, p, tau6, k, dicke_row, dicke_col + 1)
+        _push_tau!(entries, p, tau7, k, dicke_row + 1, dicke_col - 1)
+        _push_tau!(entries, p, tau8, k, dicke_row + 1, dicke_col)
+        _push_tau!(entries, p, tau9, k, dicke_row + 1, dicke_col + 1)
     end
 
-    return sparse_M
+    return sparse(M_row, M_col, M_data, nds, nds)
+end
+
+# Add the entry of row `k` coupling to the Dicke space element (dicke_row, dicke_col), if it exists.
+# Its column is the row index of that element, i.e. the column given by `tau_column`.
+function _push_tau!(entries, p::Pim, tau, k::Int, dicke_row::Int, dicke_col::Int)
+    if isdicke(p, dicke_row, dicke_col)
+        j, m = calculate_j_m(p, dicke_row, dicke_col)
+        rows, cols, data = entries
+        push!(rows, k)
+        push!(cols, calculate_k(p, dicke_row, dicke_col) + 1)
+        push!(data, tau(p, j, m))
+    end
+    return nothing
 end
 
 """
@@ -225,7 +243,8 @@ Solve the ODE for the evolution of diagonal states and Hamiltonians.
 """
 function solve(p::Pim, rho0, tlist)
     L = coefficient_matrix(p)
-    rho0_flat = diag(rho0)
+    # dense, as diag of a sparse state is a SparseVector, which is slow to integrate
+    rho0_flat = Vector(diag(rho0))
     prob = ODEProblem(_pim_rhs!, rho0_flat, (tlist[1], tlist[end]), L)
     sol = solve(prob, Tsit5(), saveat=tlist)
     # the states stay diagonal, so store them sparse instead of as dense nds × nds matrices
