@@ -271,6 +271,15 @@ function get_index(N, j, m, m1, blocks)
     return (i, k)
 end
 
+# 1-based (row, column) of the element (j, m, m1) in the density matrix, checking that it exists.
+function _dicke_index(N, j, m, m1, blocks)
+    valid = 0 <= j <= N / 2 && isinteger(N / 2 - j) &&
+            abs(m) <= j && abs(m1) <= j && isinteger(j - m) && isinteger(j - m1)
+    valid || throw(DomainError((j, m, m1), "(j, m, m1) is not an element of the Dicke space for N = $N."))
+    i, k = get_index(N, j, m, m1, blocks)
+    return (i + 1, k + 1)
+end
+
 
 
 """
@@ -288,11 +297,11 @@ map, a flattened map and the inverse of the flattened map.
 """
 function jmm1_dictionary(N::Number)
 
-    jmm1_dict::Dict = Dict()
-    jmm1_flat::Dict = Dict()
-    jmm1_inv::Dict = Dict()
-    jmm1_flat_inv::Dict = Dict()
-    nds::Integer = num_dicke_states(N)
+    jmm1_dict = Dict{Tuple{Int,Int},NTuple{3,Float64}}()
+    jmm1_flat = Dict{Int,NTuple{3,Float64}}()
+    jmm1_inv = Dict{NTuple{3,Float64},Tuple{Int,Int}}()
+    jmm1_flat_inv = Dict{NTuple{3,Float64},Int}()
+    nds = num_dicke_states(N)
     blocks = get_blocks(N)
     jvalues = j_vals(N)
 

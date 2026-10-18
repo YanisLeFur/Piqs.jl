@@ -20,13 +20,8 @@ and the state is represented as a density matrix of size (nds, nds) or
 """
 function dicke(N::Integer, j::Number, m::Number)::QuantumObject
     nds = num_dicke_states(N)
-    rho = zeros((nds, nds))
-
-    jmm1_dict = jmm1_dictionary(N)[2]
-
-    i, k = jmm1_dict[(j, m, m)]
-    rho[i+1, k+1] = 1.0
-    return Qobj(rho)
+    i, k = _dicke_index(N, j, m, m, get_blocks(N))
+    return Qobj(sparse([i], [k], [1.0], nds, nds))
 end
 
 
@@ -59,12 +54,10 @@ function dicke_basis(N::Integer, jmm1::Dict=nothing)::QuantumObject
     end
 
     nds = num_dicke_states(N)
-    rho = zeros((nds, nds))
-    jmm1_dict = jmm1_dictionary(N)[2]
-    for key in keys(jmm1)
-        i, k = jmm1_dict[key]
-        rho[i+1, k+1] = jmm1[key]
-    end
+    blocks = get_blocks(N)
+    elements = collect(jmm1)
+    indices = [_dicke_index(N, key..., blocks) for (key, _) in elements]
+    rho = sparse(first.(indices), last.(indices), float.(last.(elements)), nds, nds)
     return Qobj(rho)
 end
 
