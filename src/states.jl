@@ -44,12 +44,11 @@ the given dictionary of coefficients for each (j, m, m1).
 # Returns
 - `rho` (`QuantumObject`): The density matrix in the Dicke basis.
 """
-function dicke_basis(N::Integer, jmm1::Dict=nothing)::QuantumObject
-    if isempty(jmm1)
-
-        msg = "Please specify the jmm1 values as a dictionary"
-        msg *= "or use the `excited(N)` function to create an"
-        msg *= "excited state where jmm1 = {(N/2, N/2, N/2): 1}"
+function dicke_basis(N::Integer, jmm1::Union{Dict,Nothing}=nothing)::QuantumObject
+    if isnothing(jmm1) || isempty(jmm1)
+        msg = "Please specify the jmm1 values as a dictionary, e.g. "
+        msg *= "Dict((N/2, N/2, N/2) => 1.0) for the excited state, "
+        msg *= "or use `dicke(N, j, m)` to create a single Dicke state."
         throw(ArgumentError(msg))
     end
 

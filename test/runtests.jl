@@ -4,7 +4,6 @@ using QuantumToolbox
 using LinearAlgebra
 using SparseArrays
 
-include("test_tensor.jl")
 
 
 @testset "num_dicke_states" begin
@@ -375,6 +374,15 @@ end
     @test test_en_deg == true_en_deg
     @test test_en_deg_even == true_en_deg_even
     @test test_en_deg_odd == true_en_deg_odd
+
+    # large N must not overflow
+    @test energy_degeneracy(100, 0) == binomial(big(100), 50)
+    @test energy_degeneracy(1001, 0.5) == binomial(big(1001), 501)
+    for nn in [5, 10, 101]
+        @test sum(energy_degeneracy(nn, m) for m in m_vals(nn / 2)) == big(2)^nn
+    end
+    @test_throws DomainError energy_degeneracy(4, 0.5)
+    @test_throws DomainError energy_degeneracy(4, 3)
 end
 
 @testset "state_degeneracy" begin
@@ -390,6 +398,15 @@ end
     end
     @test state_deg == true_state_deg
     @test_throws DomainError state_degeneracy(2, -1)
+
+    # large N must not overflow
+    @test state_degeneracy(100, 0) == factorial(big(100)) ÷ (factorial(big(51)) * factorial(big(50)))
+    # the Dicke states, with their degeneracies, span the 2^N dimensional Hilbert space
+    for nn in [5, 10, 101]
+        @test sum(Int(2j + 1) * state_degeneracy(nn, j) for j in j_vals(nn)) == big(2)^nn
+    end
+    @test_throws DomainError state_degeneracy(4, 0.5)
+    @test_throws DomainError state_degeneracy(4, 3)
 end
 
 @testset "m_degeneracy" begin
@@ -507,6 +524,7 @@ end
     test_dicke_basis = db1 + db2 + db3 + db4
     @test (test_dicke_basis == true_dicke_basis)
     @test_throws ArgumentError dicke_basis(N, Dict())
+    @test_throws ArgumentError dicke_basis(N)
 end
 
 
@@ -687,6 +705,12 @@ end
     @test_throws ArgumentError pisolve(system, non_diag_state, tlist)
     # diagonal initial state with the wrong dimension
     @test_throws ArgumentError pisolve(system, dicke(3, 1.5, 1.5), tlist)
+    err = try
+        pisolve(system, dicke(3, 1.5, 1.5), tlist)
+    catch e
+        e
+    end
+    @test occursin("size", err.msg) && !occursin("diagonal", err.msg)
 end
 
 @testset "ap and am" begin

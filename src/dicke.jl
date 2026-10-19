@@ -76,14 +76,9 @@ Check if the input matrix is diagonal.
 # Returns
 - `diag` (`Bool`): `true` if the input matrix is diagonal, `false` otherwise.
 """
-function isdiagonal(mat::Union{AbstractMatrix{T},QuantumObject})::Bool where {T}
-
-
-    if mat isa QuantumObject
-        return mat.data == diagm(diag(mat))
-    else
-        return mat == diagm(diag(mat))
-    end
+function isdiagonal(mat::Union{AbstractMatrix,QuantumObject})::Bool
+    # isdiag only looks at the stored entries of sparse matrices, no dense copy needed
+    return isdiag(mat isa QuantumObject ? mat.data : mat)
 end
 
 
@@ -369,7 +364,7 @@ function pisolve(d::Dicke, initial_state::QuantumObject, tlist)
     end
 
     if size(initial_state.data) != d.dshape
-        msg = "Initial density matrix should be diagonal."
+        msg = "Initial density matrix should have size $(d.dshape), got $(size(initial_state.data))."
         throw(ArgumentError(msg))
     end
     pim = Pim(d.N, emission=d.emission, dephasing=d.dephasing, pumping=d.pumping, collective_emission=d.collective_emission, collective_pumping=d.collective_pumping, collective_dephasing=d.collective_dephasing)
