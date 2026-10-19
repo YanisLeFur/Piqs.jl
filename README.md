@@ -3,6 +3,8 @@
 *Permutational Invariant Quantum Solver in Julia*
 
 [![CI](https://github.com/YanisLeFur/PIQSolver.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/YanisLeFur/PIQSolver.jl/actions/workflows/CI.yml?query=branch%3Amain)
+[![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
+[![JET](https://img.shields.io/badge/%F0%9F%9B%A9%EF%B8%8F_tested_with-JET.jl-233f9a)](https://github.com/aviatesk/JET.jl)
 [![codecov](https://codecov.io/gh/YanisLeFur/PIQSolver.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/YanisLeFur/PIQSolver.jl)
 [![Docs](https://img.shields.io/badge/docs-dev-blue.svg)](https://yanislefur.github.io/PIQSolver.jl/dev/)
 [![Julia](https://img.shields.io/badge/julia-%E2%89%A5%201.10-9558B2.svg?logo=julia)](https://julialang.org)
