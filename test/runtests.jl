@@ -826,3 +826,21 @@ end
     @test size(rho) == (num_dicke_states(3), num_dicke_states(3))
     @test rho.data[end, end] == 1.0
 end
+
+@testset "liouvillian_dicke time-dependent Hamiltonian" begin
+    N = 4
+    jx, jy, jz = jspin(N)
+    tlist = LinRange(0, 2, 20)
+    rho0 = dicke(N, 2, 2)
+    # a time-dependent Hamiltonian with a constant coefficient reproduces the static case
+    H_td = QobjEvo(((jx, (p, t) -> 1.0),))
+    L_td = liouvillian_dicke(Dicke(N, hamiltonian=H_td, emission=1.0, collective_emission=0.5))
+    L = liouvillian_dicke(Dicke(N, hamiltonian=jx, emission=1.0, collective_emission=0.5))
+    @test L_td isa QuantumObjectEvolution
+    sol_td = mesolve(L_td, rho0, tlist, e_ops=[jz], progress_bar=Val(false))
+    sol = mesolve(L, rho0, tlist, e_ops=[jz], progress_bar=Val(false))
+    @test isapprox(sol_td.expect, sol.expect, atol=1e-6)
+end
+
+include("aqua.jl")
+include("jet.jl")

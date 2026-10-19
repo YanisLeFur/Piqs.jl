@@ -61,7 +61,9 @@ This is the [`lindbladian`](@ref) of `d` plus the coherent part
 `QuantumToolbox.mesolve`.
 
 # Returns
-- `liouv` (`QuantumObject`): The Liouvillian matrix for the system.
+- `liouv` (`QuantumObject`): The Liouvillian matrix for the system. If the Hamiltonian is
+  time-dependent (a `QuantumObjectEvolution`, see `QuantumToolbox.QobjEvo`), the Liouvillian
+  is a `QuantumObjectEvolution` too.
 
 # Example
 ```julia
@@ -73,8 +75,7 @@ rho0 = dicke(N, N / 2, N / 2)
 sol = mesolve(L, rho0, LinRange(0, 5, 50))
 ```
 """
-function liouvillian_dicke(d::Dicke)::QuantumObject
-
+function liouvillian_dicke(d::Dicke)
     if isnothing(d.hamiltonian)
         return lindbladian(d)
     else

@@ -175,7 +175,7 @@ function solve(p::Pim, rho0, tlist)
     L = coefficient_matrix(p)
     # dense, as diag of a sparse state is a SparseVector, which is slow to integrate
     rho0_flat = Vector(diag(rho0))
-    prob = ODEProblem(_pim_rhs!, rho0_flat, (tlist[1], tlist[end]), L)
+    prob = ODEProblem{true}(_pim_rhs!, rho0_flat, (tlist[1], tlist[end]), L)
     sol = solve(prob, Tsit5(), saveat=tlist)
     # the states stay diagonal, so store them sparse instead of as dense nds × nds matrices
     dims = rho0 isa QuantumObject ? rho0.dims : size(rho0, 1)
