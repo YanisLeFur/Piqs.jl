@@ -1,38 +1,3 @@
-using SparseArrays
-using OrdinaryDiffEqTsit5: ODEProblem, Tsit5
-# `solve(::Pim, ...)` is a method of the SciML `solve`, so it does not clash with OrdinaryDiffEq
-import OrdinaryDiffEqTsit5: solve
-export Pim, isdicke, tau_valid, calculate_k, calculate_j_m, coefficient_matrix, solve, tau1, tau2, tau3, tau4, tau5, tau6, tau7, tau8, tau9, tau_column
-
-
-"""
-    tau_column(tau::String, k::Integer, j::Number)
-
-Determine the column index for the non-zero elements of the matrix for a
-particular row `k` and the value of `j` from the Dicke space.
-
-# Arguments
-- `tau` (`String`): The tau function to check for this `k` and `j`.
-- `k` (`Integer`): The row of the matrix M for which the non zero elements have to be calculated.
-- `j` (`Real`): The value of `j` for this row.
-"""
-function tau_column(tau::String, k::Integer, j::Number)
-    # In the notes, we indexed from k = 1, here we do it from k = 0
-    k = k + 1
-    mapping = Dict("tau3" => k - (2 * j + 3),
-        "tau2" => k - 1,
-        "tau4" => k + (2 * j - 1),
-        "tau5" => k - (2 * j + 2),
-        "tau1" => k,
-        "tau6" => k + (2 * j),
-        "tau7" => k - (2 * j + 1),
-        "tau8" => k + 1,
-        "tau9" => k + (2 * j + 1))
-    # we need to decrement k again as indexing is from 0
-    return trunc(Int, mapping[tau] - 1)
-end
-
-
 """
     Pim
 
@@ -60,23 +25,23 @@ Invariant matrix which evolves a given diagonal initial state `p` as:
 - `collective_emission` (`Real`): Collective (superradiant) emission coefficient. (default: 0.0).
 - `collective_dephasing` (`Real`): Collective dephasing coefficient. (default: 0.0).
 - `collective_pumping` (`Real`): Collective pumping coefficient. (default: 0.0).
-- `M` (`Dict`): A nested dictionary of the structure {row: {col: val}} which holds non zero elements of the matrix M
 """
-mutable struct Pim
-    N::Integer
-    emission::Number
-    dephasing::Number
-    pumping::Number
-    collective_emission::Number
-    collective_dephasing::Number
-    collective_pumping::Number
-    M::Dict
+struct Pim{T<:Real}
+    N::Int
+    emission::T
+    dephasing::T
+    pumping::T
+    collective_emission::T
+    collective_dephasing::T
+    collective_pumping::T
+end
 
-    function Pim(N::Integer; emission::Number=0.0, dephasing::Number=0, pumping::Number=0,
-        collective_emission::Number=0, collective_pumping::Number=0,
-        collective_dephasing::Number=0)
-        return new(N, emission, dephasing, pumping, collective_emission, collective_dephasing, collective_pumping, Dict())
-    end
+function Pim(N::Integer; emission::Real=0.0, dephasing::Real=0.0, pumping::Real=0.0,
+    collective_emission::Real=0.0, collective_pumping::Real=0.0,
+    collective_dephasing::Real=0.0)
+    rates = promote(float(emission), float(dephasing), float(pumping),
+        float(collective_emission), float(collective_dephasing), float(collective_pumping))
+    return Pim{eltype(rates)}(N, rates...)
 end
 
 """
@@ -111,41 +76,6 @@ function isdicke(p::Pim, dicke_row::Integer, dicke_col::Integer)::Bool
 
     return true
 
-end
-
-"""
-    tau_valid(p::Pim, dicke_row::Integer, dicke_col::Integer)
-
-Find the Tau functions which are valid for this value of (dicke_row,
-dicke_col) given the number of TLS. This calculates the valid tau
-values and returns a dictionary specifying the tau function name and
-the value.
-
-# Arguments
-- `dicke_row` (`Integer`): Row index of the element in Dicke space which needs to be checked.
-- `dicke_col` (`Integer`): Column index of the element in Dicke space which needs to be checked.
-
-# Returns
-- `taus` (`Dict`): A dictionary of key, val as (tau=> value) consisting of the valid taus for this row and column of the Dicke space element.
-"""
-function tau_valid(p::Pim, dicke_row::Integer, dicke_col::Integer)::Union{Dict,Bool}
-    tau_functions = [tau3, tau2, tau4,
-        tau5, tau1, tau6,
-        tau7, tau8, tau9]
-    N = p.N
-    if isdicke(p, dicke_row, dicke_col) == false
-        return false
-    end
-
-    indices = [(dicke_row + x, dicke_col + y) for x in -1:1 for y in -1:1]
-    taus = Dict()
-    for (idx, tau) in zip(indices, tau_functions)
-        if isdicke(p, idx[1], idx[2])
-            j, m = calculate_j_m(p, idx[1], idx[2])
-            taus[string(tau)] = tau(p, j, m)
-        end
-    end
-    return taus
 end
 
 """
@@ -200,22 +130,40 @@ evolution of the system is given by the simple ODE: dp/dt = Mp.
 function coefficient_matrix(p::Pim)
     N = p.N
     nds = num_dicke_states(N)
-    rows = p.N
-    cols = div(N, 2) + 1
-    sparse_M = spzeros(Float64, nds, nds)
-    for dicke_row in 0:rows, dicke_col in 0:cols
-        if isdicke(p, dicke_row, dicke_col)
-            k = calculate_k(p, dicke_row, dicke_col)
-            taus = tau_valid(p, dicke_row, dicke_col)
-            for (tau, value) in taus
-                j, m = calculate_j_m(p, dicke_row, dicke_col)
-                current_col = tau_column(tau, k, j)
-                sparse_M[k+1, trunc(Int, current_col)+1] = value
-            end
-        end
+    max_entries = 9 * nds
+    M_row = sizehint!(Int[], max_entries)
+    M_col = sizehint!(Int[], max_entries)
+    M_data = sizehint!(Float64[], max_entries)
+    entries = (M_row, M_col, M_data)
+
+    for dicke_row in 0:N, dicke_col in 0:(div(N, 2)+1)
+        isdicke(p, dicke_row, dicke_col) || continue
+        k = calculate_k(p, dicke_row, dicke_col) + 1
+        _push_tau!(entries, p, tau3, k, dicke_row - 1, dicke_col - 1)
+        _push_tau!(entries, p, tau2, k, dicke_row - 1, dicke_col)
+        _push_tau!(entries, p, tau4, k, dicke_row - 1, dicke_col + 1)
+        _push_tau!(entries, p, tau5, k, dicke_row, dicke_col - 1)
+        _push_tau!(entries, p, tau1, k, dicke_row, dicke_col)
+        _push_tau!(entries, p, tau6, k, dicke_row, dicke_col + 1)
+        _push_tau!(entries, p, tau7, k, dicke_row + 1, dicke_col - 1)
+        _push_tau!(entries, p, tau8, k, dicke_row + 1, dicke_col)
+        _push_tau!(entries, p, tau9, k, dicke_row + 1, dicke_col + 1)
     end
 
-    return sparse_M
+    return sparse(M_row, M_col, M_data, nds, nds)
+end
+
+# Add the entry of row `k` coupling to the Dicke space element (dicke_row, dicke_col), if it exists.
+# Its column is the row index `k` of that element.
+function _push_tau!(entries, p::Pim, tau, k::Int, dicke_row::Int, dicke_col::Int)
+    if isdicke(p, dicke_row, dicke_col)
+        j, m = calculate_j_m(p, dicke_row, dicke_col)
+        rows, cols, data = entries
+        push!(rows, k)
+        push!(cols, calculate_k(p, dicke_row, dicke_col) + 1)
+        push!(data, tau(p, j, m))
+    end
+    return nothing
 end
 
 """
@@ -224,24 +172,18 @@ end
 Solve the ODE for the evolution of diagonal states and Hamiltonians.
 """
 function solve(p::Pim, rho0, tlist)
-
     L = coefficient_matrix(p)
-    rhs_generate(y, p, t) = L * y
-    rho0_flat = (diag(rho0))
-    rhs_generate(rho0_flat, 0, 0)
-    prob = ODEProblem(rhs_generate, rho0_flat, (tlist[1], tlist[end]))
+    # dense, as diag of a sparse state is a SparseVector, which is slow to integrate
+    rho0_flat = Vector(diag(rho0))
+    prob = ODEProblem(_pim_rhs!, rho0_flat, (tlist[1], tlist[end]), L)
     sol = solve(prob, Tsit5(), saveat=tlist)
-    output_states = [Qobj(diagm(sol.u[1]))]
-    for r in sol.u[2:end]
-        diag = diagm(r)
-        push!(output_states, Qobj(diag))
-    end
-    output_states[end]
-    output = TimeEvolutionSol(tlist, sol.t, output_states, nothing, sol.retcode, sol.alg, NaN, NaN)
-
-    return output
-
+    # the states stay diagonal, so store them sparse instead of as dense nds × nds matrices
+    dims = rho0 isa QuantumObject ? rho0.dims : size(rho0, 1)
+    output_states = [Qobj(spdiagm(0 => r), dims=dims) for r in sol.u]
+    return TimeEvolutionSol(tlist, sol.t, output_states, nothing, sol.retcode, sol.alg, NaN, NaN)
 end
+
+_pim_rhs!(dp, p, M, t) = mul!(dp, M, p)
 
 """
     tau1(p::Pim, j, m)

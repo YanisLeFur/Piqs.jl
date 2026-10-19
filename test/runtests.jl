@@ -1,10 +1,13 @@
 using PIQSolver
+# internals, not exported
+using PIQSolver: get_blocks, get_index, jmm1_dictionary, ap, am, isdicke, calculate_k, calculate_j_m,
+    gamma1, gamma2, gamma3, gamma4, gamma5, gamma6, gamma7, gamma8, gamma9,
+    tau1, tau2, tau3, tau4, tau5, tau6, tau7, tau8, tau9
 using Test
 using QuantumToolbox
 using LinearAlgebra
 using SparseArrays
 
-include("test_tensor.jl")
 
 
 @testset "num_dicke_states" begin
@@ -291,21 +294,15 @@ end
     @test test_dicke == true_dicke
 end
 
-@testset "tau_valid" begin
+@testset "coefficient_matrix all rates" begin
     N = 2
     ensemble = Pim(N, emission=1.0, dephasing=1.0, collective_dephasing=1.0, collective_emission=1.0, collective_pumping=1.0)
-    test_tauvalid = [tau_valid(ensemble, row, col) for col in [0, 1, 2] for row in [0, 1, 2]]
-    true_tauvalid = [Dict("tau1" => -4.0, "tau8" => 2.0, "tau9" => 0.0),
-        Dict("tau2" => 3.0, "tau1" => -5.5, "tau6" => 0.5, "tau8" => 2.0),
-        Dict("tau2" => 3.0, "tau4" => 1.0, "tau1" => -2.0),
-        false,
-        Dict("tau3" => 1.0, "tau5" => 0.5, "tau1" => -1.5, "tau7" => 0.0),
-        false,
-        false,
-        false,
-        false]
-
-    @test test_tauvalid == true_tauvalid
+    # row k holds the tau values of the Dicke space neighbours of element k
+    true_matrix = [-4.0 2.0 0.0 0.0;
+        3.0 -5.5 2.0 0.5;
+        0.0 3.0 -2.0 1.0;
+        1.0 0.5 0.0 -1.5]
+    @test Matrix(coefficient_matrix(ensemble)) == true_matrix
 end
 
 @testset "calculate_k" begin
@@ -375,6 +372,15 @@ end
     @test test_en_deg == true_en_deg
     @test test_en_deg_even == true_en_deg_even
     @test test_en_deg_odd == true_en_deg_odd
+
+    # large N must not overflow
+    @test energy_degeneracy(100, 0) == binomial(big(100), 50)
+    @test energy_degeneracy(1001, 0.5) == binomial(big(1001), 501)
+    for nn in [5, 10, 101]
+        @test sum(energy_degeneracy(nn, m) for m in m_vals(nn / 2)) == big(2)^nn
+    end
+    @test_throws DomainError energy_degeneracy(4, 0.5)
+    @test_throws DomainError energy_degeneracy(4, 3)
 end
 
 @testset "state_degeneracy" begin
@@ -390,6 +396,15 @@ end
     end
     @test state_deg == true_state_deg
     @test_throws DomainError state_degeneracy(2, -1)
+
+    # large N must not overflow
+    @test state_degeneracy(100, 0) == factorial(big(100)) ÷ (factorial(big(51)) * factorial(big(50)))
+    # the Dicke states, with their degeneracies, span the 2^N dimensional Hilbert space
+    for nn in [5, 10, 101]
+        @test sum(Int(2j + 1) * state_degeneracy(nn, j) for j in j_vals(nn)) == big(2)^nn
+    end
+    @test_throws DomainError state_degeneracy(4, 0.5)
+    @test_throws DomainError state_degeneracy(4, 3)
 end
 
 @testset "m_degeneracy" begin
@@ -507,6 +522,7 @@ end
     test_dicke_basis = db1 + db2 + db3 + db4
     @test (test_dicke_basis == true_dicke_basis)
     @test_throws ArgumentError dicke_basis(N, Dict())
+    @test_throws ArgumentError dicke_basis(N)
 end
 
 
@@ -586,13 +602,26 @@ end
     @test !occursin("pumping", out)
 end
 
-@testset "block_matrix" begin
-    @test PIQSolver.block_matrix(1) == ones(Int, 2, 2)
-    @test PIQSolver.block_matrix(2) == [1 1 1 0; 1 1 1 0; 1 1 1 0; 0 0 0 1]
-    @test PIQSolver.block_matrix(3) == [1 1 1 1 0 0; 1 1 1 1 0 0; 1 1 1 1 0 0; 1 1 1 1 0 0;
+# block-diagonal matrix of ones, one block of size 2j + 1 per value of j
+function block_matrix(N)
+    nds = num_dicke_states(N)
+    bm = zeros(Int, nds, nds)
+    offset = 0
+    for j in reverse(j_vals(N))
+        size_j = Int(2j + 1)
+        bm[offset+1:offset+size_j, offset+1:offset+size_j] .= 1
+        offset += size_j
+    end
+    return bm
+end
+
+@testset "Liouvillian block structure" begin
+    @test block_matrix(1) == ones(Int, 2, 2)
+    @test block_matrix(2) == [1 1 1 0; 1 1 1 0; 1 1 1 0; 0 0 0 1]
+    @test block_matrix(3) == [1 1 1 1 0 0; 1 1 1 1 0 0; 1 1 1 1 0 0; 1 1 1 1 0 0;
         0 0 0 0 1 1; 0 0 0 0 1 1]
     for N in 1:8
-        bm = PIQSolver.block_matrix(N)
+        bm = block_matrix(N)
         @test size(bm) == (num_dicke_states(N), num_dicke_states(N))
         # the Liouvillian only couples elements inside the blocks
         L = lindbladian(Dicke(N, emission=1, dephasing=1, pumping=1, collective_emission=1))
@@ -622,7 +651,7 @@ end
     @test test_dicke == Bool[1 0 0; 1 1 0; 1 1 0; 1 0 0]
     @test isdicke(ensemble, -1, 0) == false
     @test isdicke(ensemble, 0, 3) == false
-    @test tau_valid(ensemble, 0, 2) == false
+    @test isdicke(ensemble, 0, 2) == false
 end
 
 @testset "Pim trace preservation" begin
@@ -635,17 +664,10 @@ end
     end
 end
 
-@testset "calculate_j_m and tau_column" begin
+@testset "calculate_j_m" begin
     ensemble = Pim(4)
     @test calculate_j_m(ensemble, 0, 0) == (2.0, 2.0)
     @test calculate_j_m(ensemble, 3, 1) == (1.0, -1.0)
-    j = 1.0
-    k = 6
-    expected = Dict("tau1" => k, "tau2" => k - 1, "tau3" => k - 5, "tau4" => k + 1,
-        "tau5" => k - 4, "tau6" => k + 2, "tau7" => k - 3, "tau8" => k + 1, "tau9" => k + 3)
-    for (tau, col) in expected
-        @test tau_column(tau, k, j) == col
-    end
 end
 
 @testset "tau functions" begin
@@ -687,6 +709,12 @@ end
     @test_throws ArgumentError pisolve(system, non_diag_state, tlist)
     # diagonal initial state with the wrong dimension
     @test_throws ArgumentError pisolve(system, dicke(3, 1.5, 1.5), tlist)
+    err = try
+        pisolve(system, dicke(3, 1.5, 1.5), tlist)
+    catch e
+        e
+    end
+    @test occursin("size", err.msg) && !occursin("diagonal", err.msg)
 end
 
 @testset "ap and am" begin

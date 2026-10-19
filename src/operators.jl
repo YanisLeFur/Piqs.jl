@@ -1,6 +1,3 @@
-export lindbladian, liouvillian_dicke, energy_degeneracy, state_degeneracy, m_degeneracy, ap, am, spin_algebra, _jspin_uncoupled, jspin, collapse_uncoupled
-
-
 """
     lindbladian(d::Dicke)
 
@@ -12,40 +9,46 @@ sparse matrix.
 """
 function lindbladian(d::Dicke)::QuantumObject
     N = d.N
-    nds = num_dicke_states(N)
+    nds = d.nds
+    blocks = get_blocks(N)
+    jvalues = j_vals(N)
 
-    lindblad_row = []
-    lindblad_col = []
-    lindblad_data = []
+    # each (j, m, m1) couples to at most 9 elements
+    max_entries = 9 * sum(j -> Int(2 * j + 1)^2, jvalues)
+    lindblad_row = sizehint!(Int[], max_entries)
+    lindblad_col = sizehint!(Int[], max_entries)
+    lindblad_data = sizehint!(Float64[], max_entries)
+    entries = (lindblad_row, lindblad_col, lindblad_data)
 
-    _1, _2, jmm1_row, jmm1_inv = jmm1_dictionary(N)
-
-    for r in keys(jmm1_row)
-        j, m, m1 = jmm1_row[r]
-        jmm1 = [(j, m, m1),
-            (j, m + 1, m1 + 1),
-            (j + 1, m + 1, m1 + 1),
-            (j - 1, m + 1, m1 + 1),
-            (j + 1, m, m1),
-            (j - 1, m, m1),
-            (j + 1, m - 1, m1 - 1),
-            (j, m - 1, m1 - 1),
-            (j - 1, m - 1, m1 - 1)]
-        gamma_functions = [gamma1, gamma2, gamma3, gamma4, gamma5, gamma6, gamma7, gamma8, gamma9]
-        for i in eachindex(gamma_functions)
-            if jmm1[i] in keys(jmm1_inv)
-                g = gamma_functions[i](d, jmm1[i])
-                c = jmm1_inv[jmm1[i]]
-
-                push!(lindblad_row, r + 1)
-                push!(lindblad_col, c + 1)
-                push!(lindblad_data, g)
-            end
-        end
+    for j in jvalues, m in m_vals(j), m1 in m_vals(j)
+        i, k = get_index(N, j, m, m1, blocks)
+        r = nds * i + k + 1
+        _push_rate!(entries, d, gamma1, r, (j, m, m1), blocks)
+        _push_rate!(entries, d, gamma2, r, (j, m + 1, m1 + 1), blocks)
+        _push_rate!(entries, d, gamma3, r, (j + 1, m + 1, m1 + 1), blocks)
+        _push_rate!(entries, d, gamma4, r, (j - 1, m + 1, m1 + 1), blocks)
+        _push_rate!(entries, d, gamma5, r, (j + 1, m, m1), blocks)
+        _push_rate!(entries, d, gamma6, r, (j - 1, m, m1), blocks)
+        _push_rate!(entries, d, gamma7, r, (j + 1, m - 1, m1 - 1), blocks)
+        _push_rate!(entries, d, gamma8, r, (j, m - 1, m1 - 1), blocks)
+        _push_rate!(entries, d, gamma9, r, (j - 1, m - 1, m1 - 1), blocks)
     end
-    lindblad_matrix = sparse((lindblad_row), (lindblad_col), Float64.(lindblad_data), nds^2, nds^2)
+    lindblad_matrix = sparse(lindblad_row, lindblad_col, lindblad_data, nds^2, nds^2)
     lindblad_qobj = Qobj(lindblad_matrix, type=SuperOperator())
     return lindblad_qobj
+end
+
+# Add the entry of row `r` coupling to `jmm1 = (j, m, m1)` if that element exists in the Dicke space.
+function _push_rate!(entries, d::Dicke, gamma, r::Int, jmm1, blocks)
+    j, m, m1 = jmm1
+    if 0 <= j <= d.N / 2 && abs(m) <= j && abs(m1) <= j
+        i, k = get_index(d.N, j, m, m1, blocks)
+        rows, cols, data = entries
+        push!(rows, r)
+        push!(cols, d.nds * i + k + 1)
+        push!(data, gamma(d, jmm1))
+    end
+    return nothing
 end
 
 """
@@ -87,21 +90,21 @@ end
 
 Calculate the number of Dicke states with same energy.
 
-The computation uses `BigFloat` factorials, which allows to explore N > 1000.
+This is the binomial coefficient ``\\binom{N}{N/2 + m}``, computed exactly with
+`BigInt`, which allows to explore N > 1000.
 
 # Arguments
 - `N` (`Integer`): The number of two-level systems.
 - `m` (`Number`): Total spin z-axis projection eigenvalue. This is proportional to the total energy.
 
 # Returns
-- `degeneracy` (`Integer`): The energy degeneracy
+- `degeneracy` (`BigInt`): The energy degeneracy
 """
-function energy_degeneracy(N::Integer, m::Number)::Integer
-    numerator = factorial(BigFloat(N))
-    d1 = factorial(BigFloat(N / 2 + m))
-    d2 = factorial(BigFloat(N / 2 - m))
-    degeneracy = numerator / (d1 * d2)
-    return trunc(Int, degeneracy)
+function energy_degeneracy(N::Integer, m::Number)::BigInt
+    if !(abs(m) <= N / 2 && isinteger(N / 2 + m))
+        throw(DomainError(m, "m value is incorrect for N = $N."))
+    end
+    return binomial(big(N), Int(N / 2 + m))
 end
 
 """
@@ -112,25 +115,24 @@ Calculate the degeneracy of the Dicke state.
 Each state ``|j, m\\rangle`` includes D(N,j) irreducible
 representations ``|j, m, \\alpha\\rangle``.
 
-Uses arbitrary-precision integers to calculate large numerators and denominators.
+Uses arbitrary-precision integers, so the result is exact for any N.
 
 # Arguments
 - `N` (`Integer`): The number of two-level systems.
 - `j` (`AbstractFloat`): Total spin eigenvalue (cooperativity).
 
 # Returns
-- `degeneracy` (`Integer`): The state degeneracy.
+- `degeneracy` (`BigInt`): The state degeneracy.
 """
-function state_degeneracy(N::Integer, j::Number)::Integer
+function state_degeneracy(N::Integer, j::Number)::BigInt
     if j < 0
         throw(DomainError("j value should be >= 0"))
     end
-    numerator = factorial(big(N)) * big(2 * j + 1)
-    denominator_1 = (factorial(big(N / 2 + j + 1)))
-    denominator_2 = (factorial(big(N / 2 - j)))
-    degeneracy = numerator / (denominator_1 * denominator_2)
-    degeneracy = trunc(Int, round(float(degeneracy)))
-    return degeneracy
+    if !(j <= N / 2 && isinteger(N / 2 - j))
+        throw(DomainError(j, "j value is incorrect for N = $N."))
+    end
+    # N! (2j + 1) / ((N/2 + j + 1)! (N/2 - j)!), the division is exact
+    return div(binomial(big(N), Int(N / 2 - j)) * Int(2 * j + 1), Int(N / 2 + j + 1))
 end
 
 
@@ -312,27 +314,13 @@ function jspin(N::Integer; op::Union{String,Nothing}=nothing, basis::String="dic
         return _jspin_uncoupled(N, op)
     end
     nds = num_dicke_states(N)
-    num_ladders = num_dicke_ladders(N)
-    jz_operator = spzeros(nds, nds)
-    jp_operator = spzeros(nds, nds)
-    jm_operator = spzeros(nds, nds)
-    s = 0
-    j = 0.0
-    for k in 0:num_ladders-1
-        j = 0.5 * N - k
-        mmax = trunc(Int, 2 * j + 1)
-        for i in 0:mmax-1
-            m = j - i
-            jz_operator[s+1, s+1] = m
-            if (s + 1) in 0:nds-1
-                jp_operator[s+1, s+2] = ap(j, m - 1)
-            end
-            if (s - 1) in 0:nds-1
-                jm_operator[s+1, s] = am(j, m + 1)
-            end
-            s = s + 1
-        end
-    end
+    # (j, m) of each Dicke state, in the order of the basis
+    jm_pairs = [(j, m) for j in reverse(j_vals(N)) for m in reverse(m_vals(j))]
+    # J+ |j, m-1> = ap(j, m-1) |j, m> couples consecutive states of the same ladder
+    jp_diag = [j == j_next ? ap(j, m_next) : 0.0 for ((j, _), (j_next, m_next)) in zip(jm_pairs, jm_pairs[2:end])]
+    jz_operator = dropzeros!(spdiagm(0 => last.(jm_pairs)))
+    jp_operator = dropzeros!(spdiagm(1 => jp_diag))
+    jm_operator = dropzeros!(spdiagm(-1 => jp_diag))
 
     jx_operator = 1 / 2 * (jp_operator + jm_operator)
     jy_operator = 1im / 2 * (jm_operator - jp_operator)

@@ -1,14 +1,22 @@
-using QuantumToolbox
-export super_tensor
-
-function permute_dimensions(matrix, dimensions, order)
-    reshape_factor = (dimensions..., dimensions...)
-    tensor_data = _reshape_sparse(matrix, reshape_factor)
+# Equivalent of reshape(matrix, (dimensions..., dimensions...)), followed by
+# permutedims with (order..., order .+ N...) and a reshape back to a square matrix,
+# done on the indices of the stored entries only.
+function permute_dimensions(matrix::SparseMatrixCSC, dimensions, order)
     N = length(dimensions)
-    perm = (order..., order .+ N...)
-    tensor_data = permutedims(tensor_data, perm)
-    new_shape = (prod(dimensions), prod(dimensions))
-    return _to_csc(_reshape_sparse(tensor_data, new_shape))
+    shape = (dimensions..., dimensions...)
+    perm = (order..., (order .+ N)...)
+    new_shape = map(p -> shape[p], perm)
+    return _permute_entries(matrix, CartesianIndices(shape), LinearIndices(new_shape), perm, prod(dimensions))
+end
+
+function _permute_entries(matrix, old_indices, new_indices, perm, n)
+    rows, cols, vals = findnz(matrix)
+    nrows = size(matrix, 1)
+    new_linear = map(rows, cols) do i, j
+        idx = Tuple(old_indices[i+(j-1)*nrows])
+        new_indices[map(p -> idx[p], perm)...]
+    end
+    return sparse(mod1.(new_linear, n), cld.(new_linear, n), vals, n, n)
 end
 
 function compute_order(dimensions)
