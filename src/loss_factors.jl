@@ -1,6 +1,3 @@
-export gamma1, gamma2, gamma3, gamma4, gamma5, gamma6, gamma7, gamma8, gamma9
-
-
 """
     gamma1(d::Dicke, jmm1)
 

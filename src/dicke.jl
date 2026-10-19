@@ -1,9 +1,3 @@
-export num_dicke_states, num_dicke_ladders, num_tls, isdiagonal, get_blocks, j_vals, m_vals, get_index, jmm1_dictionary, Dicke, pisolve, c_ops, coefficient_matrix
-
-using QuantumToolbox
-
-
-
 """
     num_dicke_states(N::Integer)
 
@@ -373,34 +367,6 @@ function pisolve(d::Dicke, initial_state::QuantumObject, tlist)
 end
 
 """
-    block_matrix(N::Integer)
-
-Construct the block-diagonal matrix for the Dicke basis.
-
-# Arguments
-- `N` (`Integer`): Number of two-level systems.
-
-# Returns
-- `block_matr` (`Matrix`): A 2D block-diagonal matrix of ones with dimension (nds, nds), where nds is the number of Dicke states for N two-level systems.
-"""
-function block_matrix(N::Integer)::Matrix{Int}
-    nds = num_dicke_states(N)
-    blocks_dimensions = num_dicke_ladders(N)
-    blocks_list = [2 * (i + 1 * (N % 2)) + 1 * ((N + 1) % 2) for i in 0:(blocks_dimensions-1)]
-    blocks_list = reverse(blocks_list)
-
-    block_matr = zeros(Int, nds, nds)
-    offset = 0
-    for i in blocks_list
-        block_matr[offset+1:offset+i, offset+1:offset+i] .= 1
-        offset += i
-    end
-
-    return block_matr
-end
-
-
-"""
     c_ops(d::Dicke)
 
 Build collapse operators in the full Hilbert space 2^N.
@@ -423,58 +389,3 @@ Build coefficient matrix for ODE for a diagonal problem.
 function coefficient_matrix(d::Dicke)
     return coefficient_matrix(Pim(d.N, emission=d.emission, dephasing=d.dephasing, pumping=d.pumping, collective_emission=d.collective_emission, collective_dephasing=d.collective_dephasing, collective_pumping=d.collective_pumping))
 end
-
-
-
-
-
-
-
-# REMOVED FUNCTIONS
-
-
-# function prune_eigenstates(d::Dicke, liouvillian::QuantumObject)::Vector
-#     """Remove spurious eigenvalues and eigenvectors of the Liouvillian.
-
-#     Spurious means that the given eigenvector has elements outside of the
-#     block-diagonal matrix.
-
-#     Parameters
-#     ----------
-#     liouvillian_eigenstates: list
-#         A list with the eigenvalues and eigenvectors of the Liouvillian
-#         including spurious ones.
-
-#     Returns
-#     -------
-#     correct_eigenstates: list
-#         The list with the correct eigenvalues and eigenvectors of the
-#         Liouvillian.
-#     """
-#     eig_val, eig_vec = eigenstates(liouvillian)
-#     N = d.N
-#     block_mat = block_matrix(N)
-#     nnz_tuple_bm = [(i, j) for (i, j) in zip(findall(!iszero, block_mat))]
-
-#     forbidden_eig_index = []
-#     for k in 1:length(eig_val)
-#         dm = vec2mat(eig_vec[k])
-#         nnz_tuple = [(i, j) for (i, j) in zip(findall(!iszero, dm.data))]
-#         for i in nnz_tuple
-#             if i
-#                 not in nnz_tuple_bm
-#                 if nd.round(dm[i], tol) != 0
-#                     forbidden_eig_index.append(k)
-#                 end
-#             end
-#         end
-#     end
-
-
-#     forbidden_eig_index = unique(forbidden_eig_index)
-#     correct_eig_val = deleteat!(eig_val, forbidden_eig_index)
-#     correct_eig_vec = deleteat!(eig_vec, forbidden_eig_index)
-#     correct_eigenstates = (correct_eig_val, correct_eig_vec)
-#     return correct_eigenstates
-# end
-

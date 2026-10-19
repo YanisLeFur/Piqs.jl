@@ -1,6 +1,3 @@
-export lindbladian, liouvillian_dicke, energy_degeneracy, state_degeneracy, m_degeneracy, ap, am, spin_algebra, _jspin_uncoupled, jspin, collapse_uncoupled
-
-
 """
     lindbladian(d::Dicke)
 

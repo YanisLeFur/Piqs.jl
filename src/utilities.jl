@@ -1,6 +1,3 @@
-using QuantumToolbox
-export super_tensor
-
 # Equivalent of reshape(matrix, (dimensions..., dimensions...)), followed by
 # permutedims with (order..., order .+ N...) and a reshape back to a square matrix,
 # done on the indices of the stored entries only.

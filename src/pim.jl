@@ -1,38 +1,3 @@
-using SparseArrays
-using OrdinaryDiffEqTsit5: ODEProblem, Tsit5
-# `solve(::Pim, ...)` is a method of the SciML `solve`, so it does not clash with OrdinaryDiffEq
-import OrdinaryDiffEqTsit5: solve
-export Pim, isdicke, tau_valid, calculate_k, calculate_j_m, coefficient_matrix, solve, tau1, tau2, tau3, tau4, tau5, tau6, tau7, tau8, tau9, tau_column
-
-
-"""
-    tau_column(tau::String, k::Integer, j::Number)
-
-Determine the column index for the non-zero elements of the matrix for a
-particular row `k` and the value of `j` from the Dicke space.
-
-# Arguments
-- `tau` (`String`): The tau function to check for this `k` and `j`.
-- `k` (`Integer`): The row of the matrix M for which the non zero elements have to be calculated.
-- `j` (`Real`): The value of `j` for this row.
-"""
-function tau_column(tau::String, k::Integer, j::Number)
-    # In the notes, we indexed from k = 1, here we do it from k = 0
-    k = k + 1
-    mapping = Dict("tau3" => k - (2 * j + 3),
-        "tau2" => k - 1,
-        "tau4" => k + (2 * j - 1),
-        "tau5" => k - (2 * j + 2),
-        "tau1" => k,
-        "tau6" => k + (2 * j),
-        "tau7" => k - (2 * j + 1),
-        "tau8" => k + 1,
-        "tau9" => k + (2 * j + 1))
-    # we need to decrement k again as indexing is from 0
-    return trunc(Int, mapping[tau] - 1)
-end
-
-
 """
     Pim
 
@@ -114,41 +79,6 @@ function isdicke(p::Pim, dicke_row::Integer, dicke_col::Integer)::Bool
 end
 
 """
-    tau_valid(p::Pim, dicke_row::Integer, dicke_col::Integer)
-
-Find the Tau functions which are valid for this value of (dicke_row,
-dicke_col) given the number of TLS. This calculates the valid tau
-values and returns a dictionary specifying the tau function name and
-the value.
-
-# Arguments
-- `dicke_row` (`Integer`): Row index of the element in Dicke space which needs to be checked.
-- `dicke_col` (`Integer`): Column index of the element in Dicke space which needs to be checked.
-
-# Returns
-- `taus` (`Dict`): A dictionary of key, val as (tau=> value) consisting of the valid taus for this row and column of the Dicke space element.
-"""
-function tau_valid(p::Pim, dicke_row::Integer, dicke_col::Integer)::Union{Dict,Bool}
-    tau_functions = [tau3, tau2, tau4,
-        tau5, tau1, tau6,
-        tau7, tau8, tau9]
-    N = p.N
-    if isdicke(p, dicke_row, dicke_col) == false
-        return false
-    end
-
-    indices = [(dicke_row + x, dicke_col + y) for x in -1:1 for y in -1:1]
-    taus = Dict()
-    for (idx, tau) in zip(indices, tau_functions)
-        if isdicke(p, idx[1], idx[2])
-            j, m = calculate_j_m(p, idx[1], idx[2])
-            taus[string(tau)] = tau(p, j, m)
-        end
-    end
-    return taus
-end
-
-"""
     calculate_j_m(p::Pim, dicke_row::Integer, dicke_col::Integer)
 
 Get the value of j and m for the particular Dicke space element.
@@ -224,7 +154,7 @@ function coefficient_matrix(p::Pim)
 end
 
 # Add the entry of row `k` coupling to the Dicke space element (dicke_row, dicke_col), if it exists.
-# Its column is the row index of that element, i.e. the column given by `tau_column`.
+# Its column is the row index `k` of that element.
 function _push_tau!(entries, p::Pim, tau, k::Int, dicke_row::Int, dicke_col::Int)
     if isdicke(p, dicke_row, dicke_col)
         j, m = calculate_j_m(p, dicke_row, dicke_col)

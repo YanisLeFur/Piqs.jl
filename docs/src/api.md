@@ -13,6 +13,7 @@ liouvillian_dicke
 pisolve
 c_ops
 coefficient_matrix
+Pim
 ```
 
 ## Operators
@@ -21,7 +22,6 @@ coefficient_matrix
 jspin
 spin_algebra
 collapse_uncoupled
-_jspin_uncoupled
 ```
 
 ## States
@@ -45,27 +45,35 @@ num_dicke_ladders
 num_tls
 j_vals
 m_vals
-get_blocks
-get_index
-jmm1_dictionary
 isdiagonal
 energy_degeneracy
 state_degeneracy
 m_degeneracy
-ap
-am
 ```
 
-## Permutational invariant matrix
+## Internals
+
+These functions are not exported. They are documented for developers and can be
+called with the `PIQSolver.` prefix, e.g. `PIQSolver.jmm1_dictionary(N)`.
+
+### Dicke space indexing
 
 ```@docs
-Pim
+get_blocks
+get_index
+jmm1_dictionary
+ap
+am
+_jspin_uncoupled
+```
+
+### Permutational invariant matrix
+
+```@docs
 PIQSolver.solve
 isdicke
-tau_valid
 calculate_j_m
 calculate_k
-tau_column
 tau1
 tau2
 tau3
@@ -77,7 +85,7 @@ tau8
 tau9
 ```
 
-## Lindbladian rates
+### Lindbladian rates
 
 ```@docs
 gamma1
