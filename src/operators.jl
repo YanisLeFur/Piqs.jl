@@ -69,7 +69,7 @@ This is the [`lindbladian`](@ref) of `d` plus the coherent part
 ```julia
 using PIQSolver, QuantumToolbox
 N = 4
-system = Dicke(N, hamiltonian=jspin(N, op="x"), collective_emission=1.0)
+system = Dicke(N, hamiltonian=jspin(N, op=:x), collective_emission=1.0)
 L = liouvillian_dicke(system)
 rho0 = dicke(N, N / 2, N / 2)
 sol = mesolve(L, rho0, LinRange(0, 5, 50))
@@ -200,15 +200,31 @@ function am(j::AbstractFloat, m::AbstractFloat)::AbstractFloat
     return sqrt((j + m) * (j - m + 1))
 end
 
+const _SPIN_OPS = (:x, :y, :z, :+, :-)
+
+function _check_op(op)
+    op in _SPIN_OPS || throw(ArgumentError("Invalid operator type `$(repr(op))`, expected one of $(_SPIN_OPS)."))
+    return op
+end
+
+# single-site operator for `op`; x, y and z are spin-1/2 operators (Pauli matrices / 2)
+function _single_spin(op::Symbol)
+    op === :x && return 0.5 * sigmax()
+    op === :y && return 0.5 * sigmay()
+    op === :z && return 0.5 * sigmaz()
+    op === :+ && return sigmap()
+    return sigmam()
+end
+
 """
-    spin_algebra(N::Integer, op::Union{String,Nothing}=nothing)
+    spin_algebra(N::Integer, op::Union{Symbol,Nothing}=nothing)
 
 Create the list [sx, sy, sz] with the spin operators.
 
 The operators are constructed for a collection of N two-level systems
 (TLSs). Each element of the list, i.e., sx, is a vector of `QuantumObject`
 objects (spin matrices), as it contains the list of the SU(2) Pauli
-matrices for the N TLSs. Each TLS operator sx[i], with i = 0, ..., (N-1),
+matrices for the N TLSs. Each TLS operator sx[i], with i = 1, ..., N,
 is placed in a ``2^N``-dimensional Hilbert space.
 
 # Notes
@@ -216,31 +232,25 @@ sx[i] is ``\\frac{\\sigma_x}{2}`` in the composite Hilbert space.
 
 # Arguments
 - `N` (`Integer`): The number of two-level systems.
+- `op` (`Symbol`): The operator to return, one of `:x`, `:y`, `:z`, `:+`, `:-`. If no operator is given, the output is [sx, sy, sz].
 
 # Returns
-- `spin_operators` (`QuantumObject or Vector{QuantumObject}`): A list of `QuantumObject` operators - [sx, sy, sz] or the requested operator.
-"""
-function spin_algebra(N::Integer, op::Union{String,Nothing}=nothing)
-    ops = Dict(
-        "x" => 0.5 * sigmax(),
-        "y" => 0.5 * sigmay(),
-        "z" => 0.5 * sigmaz(),
-        "+" => sigmap(),
-        "-" => sigmam()
-    )
-    if isnothing(op)
-        return [ops["x"], ops["y"], ops["z"]] .|> (op -> [multisite_operator(N, i => op) for i in 1:N])
-    end
+- `spin_operators` (`Vector{Vector{QuantumObject}}` or `Vector{QuantumObject}`): [sx, sy, sz] or the list of single-site operators for `op`.
 
-    if !haskey(ops, op)
-        throw(DomainError("Invalid operator type: $op"))
+# Throws
+- `ArgumentError` if `op` is not one of `:x`, `:y`, `:z`, `:+`, `:-`.
+"""
+function spin_algebra(N::Integer, op::Union{Symbol,Nothing}=nothing)
+    if isnothing(op)
+        return [spin_algebra(N, :x), spin_algebra(N, :y), spin_algebra(N, :z)]
     end
-    return [multisite_operator(N, i => ops[op]) for i in 1:N]
+    single = _single_spin(_check_op(op))
+    return [multisite_operator(N, i => single) for i in 1:N]
 end
 
 
 """
-    _jspin_uncoupled(N::Integer, op::Union{String,Nothing}=nothing)
+    _jspin_uncoupled(N::Integer, op::Union{Symbol,Nothing}=nothing)
 
 Construct the collective spin algebra in the uncoupled basis.
 
@@ -250,69 +260,53 @@ Hilbert space of dimension 2^N.
 
 # Arguments
 - `N` (`Integer`): The number of two-level systems.
-- `op` (`String`): The operator to return 'x', 'y', 'z', '+', '-'. If no operator is given, the output is the list of operators for ['x', 'y', 'z'].
+- `op` (`Symbol`): The operator to return, one of `:x`, `:y`, `:z`, `:+`, `:-`. If no operator is given, the output is the list of operators [jx, jy, jz].
 
 # Returns
-- `collective_operators` (`QuantumObject or Vector{QuantumObject}`): A list of `QuantumObject` representing all the operators in the "uncoupled" basis or a single operator requested.
+- `collective_operators` (`QuantumObject or Vector{QuantumObject}`): A list of `QuantumObject` representing all the operators in the uncoupled basis or a single operator requested.
 """
-function _jspin_uncoupled(N::Integer, op::Union{String,Nothing}=nothing)
-    # Ensure N is an integer
-    N = trunc(Int, N)
-
-    # Define spin operators in the uncoupled basis
-    sx, sy, sz = spin_algebra(N)
-    sp, sm = spin_algebra(N, "+"), spin_algebra(N, "-")
-
-    # Compute collective operators
-    jx = sum(sx)
-    jy = sum(sy)
-    jz = sum(sz)
-    jp = sum(sp)
-    jm = sum(sm)
-
-    # Return requested operator or the full list
+function _jspin_uncoupled(N::Integer, op::Union{Symbol,Nothing}=nothing)
     if isnothing(op)
-        return [jx, jy, jz]
+        return [_jspin_uncoupled(N, :x), _jspin_uncoupled(N, :y), _jspin_uncoupled(N, :z)]
     end
-
-    return op == "x" ? jx :
-           op == "y" ? jy :
-           op == "z" ? jz :
-           op == "+" ? jp :
-           op == "-" ? jm :
-           throw(DomainError("Invalid operator type: $op"))
+    return sum(spin_algebra(N, op))
 end
 
 
 """
-    jspin(N::Integer; op::Union{String,Nothing}=nothing, basis::String="dicke")
+    jspin(N::Integer; op::Union{Symbol,Nothing}=nothing, basis::Symbol=:dicke)
 
 Calculate the list of collective operators of the total algebra.
 
 The Dicke basis ``|j,m\\rangle\\langle j,m'|`` is used by
-default. Otherwise with "uncoupled" the operators are in a
+default. Otherwise with `basis=:uncoupled` the operators are in a
 ``2^N`` space.
 
 # Arguments
 - `N` (`Integer`): Number of two-level systems.
-- `op` (`String`): The operator to return 'x','y','z','+','-'. If no operator given, then output is the list of operators for ['x','y','z'].
-- `basis` (`String`): The basis of the operators - "dicke" or "uncoupled" (default: "dicke").
+- `op` (`Symbol`): The operator to return, one of `:x`, `:y`, `:z`, `:+`, `:-`. If no operator is given, the output is the list of operators [jx, jy, jz].
+- `basis` (`Symbol`): The basis of the operators, `:dicke` or `:uncoupled` (default: `:dicke`).
 
 # Returns
-- `j_alg` (`QuantumObject or Vector{QuantumObject}`): A list of `QuantumObject` representing all the operators in the "dicke" or "uncoupled" basis or a single operator requested.
+- `j_alg` (`QuantumObject or Vector{QuantumObject}`): A list of `QuantumObject` representing all the operators in the Dicke or uncoupled basis or a single operator requested.
+
+# Throws
+- `ArgumentError` if `op` or `basis` is not one of the values above.
 
 # Example
 ```julia
 using PIQSolver
-jx, jy, jz = jspin(4)                      # Dicke basis, 9×9 matrices
-jp = jspin(4, op="+")
-jz_full = jspin(4, op="z", basis="uncoupled")  # 2^4 = 16 dimensional
+jx, jy, jz = jspin(4)                         # Dicke basis, 9×9 matrices
+jp = jspin(4, op=:+)
+jz_full = jspin(4, op=:z, basis=:uncoupled)  # 2^4 = 16 dimensional
 ```
 """
-function jspin(N::Integer; op::Union{String,Nothing}=nothing, basis::String="dicke")
-
-    if basis == "uncoupled"
+function jspin(N::Integer; op::Union{Symbol,Nothing}=nothing, basis::Symbol=:dicke)
+    isnothing(op) || _check_op(op)
+    if basis === :uncoupled
         return _jspin_uncoupled(N, op)
+    elseif basis !== :dicke
+        throw(ArgumentError("Invalid basis `$(repr(basis))`, expected `:dicke` or `:uncoupled`."))
     end
     nds = num_dicke_states(N)
     # (j, m) of each Dicke state, in the order of the basis
@@ -335,12 +329,10 @@ function jspin(N::Integer; op::Union{String,Nothing}=nothing, basis::String="dic
         return [jx, jy, jz]
     end
 
-    return op == "x" ? jx :
-           op == "y" ? jy :
-           op == "z" ? jz :
-           op == "+" ? jp :
-           op == "-" ? jm :
-           throw(DomainError("Invalid operator type: $op"))
+    return op === :x ? jx :
+           op === :y ? jy :
+           op === :z ? jz :
+           op === :+ ? jp : jm
 end
 
 
@@ -380,11 +372,11 @@ function collapse_uncoupled(N::Integer; emission::Union{AbstractFloat,Integer}=0
         @warn "N > 10. dim(H) = 2^N. Better use `PIQSolver.lindbladian` to reduce Hilbert space dimension and exploit permutational symmetry."
     end
 
-    sz = spin_algebra(N)[3]
-    sp, sm = spin_algebra(N, "+"), spin_algebra(N, "-")
-    jz = jspin(N, basis="uncoupled")[3]
-    jp, jm = (jspin(N, op="+", basis="uncoupled"),
-        jspin(N, op="-", basis="uncoupled"))
+    sz = spin_algebra(N, :z)
+    sp, sm = spin_algebra(N, :+), spin_algebra(N, :-)
+    jz = jspin(N, op=:z, basis=:uncoupled)
+    jp, jm = (jspin(N, op=:+, basis=:uncoupled),
+        jspin(N, op=:-, basis=:uncoupled))
     c_ops = []
 
     for (coeff, op_list) in [(emission, sm), (dephasing, sz), (pumping, sp)]

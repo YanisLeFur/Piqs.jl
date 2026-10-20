@@ -38,8 +38,8 @@ Superradiant decay of ``N = 10`` initially excited two-level systems:
 using PIQSolver, QuantumToolbox
 
 N = 10
-jz = jspin(N, op="z")
-jp, jm = jspin(N, op="+"), jspin(N, op="-")
+jz = jspin(N, op=:z)
+jp, jm = jspin(N, op=:+), jspin(N, op=:-)
 
 system = Dicke(N, collective_emission=1.0)   # collective (superradiant) emission
 L = liouvillian_dicke(system)                # Liouvillian in the Dicke basis

@@ -41,8 +41,8 @@ as `QuantumObject`s in the Dicke basis:
 
 ```@example start
 jx, jy, jz = jspin(N)
-jp = jspin(N, op="+")
-jm = jspin(N, op="-")
+jp = jspin(N, op=:+)
+jm = jspin(N, op=:-)
 size(jz)
 ```
 
@@ -53,11 +53,11 @@ commutator = jx * jy - jy * jx
 isapprox(commutator, 1im * jz)
 ```
 
-Use `basis="uncoupled"` to get the same operators in the full ``2^N`` dimensional
+Use `basis=:uncoupled` to get the same operators in the full ``2^N`` dimensional
 space, which is useful to check results on small systems:
 
 ```@example start
-size(jspin(N, op="z", basis="uncoupled"))
+size(jspin(N, op=:z, basis=:uncoupled))
 ```
 
 ## States
