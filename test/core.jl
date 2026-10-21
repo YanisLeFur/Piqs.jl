@@ -928,3 +928,52 @@ end
     end
     @test err isa DomainError && err.val == -1
 end
+
+@testset "physics: Dicke basis vs brute force 2^N" begin
+    # every rate at once, a non-diagonal Hamiltonian, even and odd N: the permutational
+    # invariant dynamics must reproduce the full 2^N master equation
+    rates = (emission=0.7, dephasing=0.4, pumping=0.3, collective_emission=0.5,
+        collective_dephasing=0.2, collective_pumping=0.25)
+    tlist = LinRange(0, 2, 21)
+    for N in (3, 4)
+        H = jspin(N, op=:x) + 0.3 * jspin(N, op=:z)^2
+        H_u = jspin(N, op=:x, basis=:uncoupled) + 0.3 * jspin(N, op=:z, basis=:uncoupled)^2
+        system = Dicke(N; hamiltonian=H, rates...)
+        e_ops = [jspin(N, op=:z), jspin(N, op=:x), jspin(N, op=:+) * jspin(N, op=:-)]
+        e_ops_u = [jspin(N, op=:z, basis=:uncoupled), jspin(N, op=:x, basis=:uncoupled),
+            jspin(N, op=:+, basis=:uncoupled) * jspin(N, op=:-, basis=:uncoupled)]
+
+        sol = mesolve(liouvillian_dicke(system), dicke(N, N / 2, N / 2), tlist,
+            e_ops=e_ops, progress_bar=Val(false))
+        psi0 = tensor(fill(basis(2, 0), N)...)   # all two-level systems excited
+        sol_u = mesolve(H_u, ket2dm(psi0), tlist, collapse_uncoupled(system),
+            e_ops=e_ops_u, progress_bar=Val(false))
+        @test isapprox(sol.expect, sol_u.expect, atol=1e-5)
+    end
+end
+
+@testset "physics: pisolve vs mesolve from a mixed state" begin
+    tlist = LinRange(0, 2, 21)
+    for N in (4, 5)
+        system = Dicke(N, emission=0.7, dephasing=0.4, pumping=0.3, collective_emission=0.5,
+            collective_pumping=0.25)
+        jmax = N / 2
+        rho0 = dicke_basis(N, Dict((jmax, jmax - 1, jmax - 1) => 0.5, (jmax - 1, jmax - 1, jmax - 1) => 0.5))
+        sol_pim = pisolve(system, rho0, tlist)
+        sol_me = mesolve(liouvillian_dicke(system), rho0, tlist, progress_bar=Val(false))
+        @test all(isapprox(sol_pim.states[i].data, sol_me.states[i].data, atol=1e-6) for i in eachindex(tlist))
+        @test all(isapprox(tr(s), 1, atol=1e-8) for s in sol_pim.states)
+    end
+end
+
+@testset "pisolve solver options" begin
+    system = Dicke(2, emission=1.0)
+    tlist = [0.0, 1.0]
+    exact = exp(-2 * tlist[end])   # population of |1, 1> for local emission at rate 1
+    tight = pisolve(system, dicke(2, 1, 1), tlist, abstol=1e-12, reltol=1e-10)
+    loose = pisolve(system, dicke(2, 1, 1), tlist, abstol=1e-3, reltol=1e-2)
+    @test abs(real(tight.states[end][1, 1]) - exact) < 1e-9
+    @test abs(real(tight.states[end][1, 1]) - exact) < abs(real(loose.states[end][1, 1]) - exact)
+    # other options are passed to the ODE solver
+    @test string(pisolve(system, dicke(2, 1, 1), LinRange(0, 10, 3), maxiters=2).retcode) == "MaxIters"
+end
