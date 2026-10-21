@@ -204,19 +204,22 @@ function Base.show(io::IO, sol::PimSolution)
 end
 
 """
-    solve(p::Pim, rho0, tlist)
+    solve(p::Pim, rho0, tlist; alg=Tsit5(), abstol=1e-8, reltol=1e-6, kwargs...)
 
 Solve the ODE for the evolution of diagonal states and Hamiltonians.
+
+The default tolerances are those of `QuantumToolbox.mesolve`. `alg` and any other keyword
+argument are passed to the SciML `solve` (OrdinaryDiffEq.jl's common solver options).
 
 # Returns
 - `result` ([`PimSolution`](@ref)): The time points and the diagonal density matrices.
 """
-function solve(p::Pim, rho0, tlist)
+function solve(p::Pim, rho0, tlist; alg=Tsit5(), abstol=1e-8, reltol=1e-6, kwargs...)
     L = coefficient_matrix(p)
     # dense, as diag of a sparse state is a SparseVector, which is slow to integrate
     rho0_flat = Vector(diag(rho0))
     prob = ODEProblem{true}(_pim_rhs!, rho0_flat, (tlist[1], tlist[end]), L)
-    sol = solve(prob, Tsit5(), saveat=tlist)
+    sol = solve(prob, alg; saveat=tlist, abstol=abstol, reltol=reltol, kwargs...)
     # the states stay diagonal, so store them sparse instead of as dense nds × nds matrices
     dims = rho0 isa QuantumObject ? rho0.dims : size(rho0, 1)
     output_states = [Qobj(spdiagm(0 => r), dims=dims) for r in sol.u]

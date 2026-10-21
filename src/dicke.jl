@@ -348,7 +348,7 @@ end
 
 
 """
-    pisolve(d::Dicke, initial_state::QuantumObject, tlist)
+    pisolve(d::Dicke, initial_state::QuantumObject, tlist; alg=Tsit5(), abstol=1e-8, reltol=1e-6, kwargs...)
 
 Solve for diagonal Hamiltonians and initial states faster.
 
@@ -360,6 +360,13 @@ which is integrated with the permutational invariant matrix [`Pim`](@ref).
 - `d` (`Dicke`): The system. Its Hamiltonian, if any, must be diagonal.
 - `initial_state` (`QuantumObject`): A diagonal initial density matrix in the Dicke basis.
 - `tlist` (`AbstractVector`): The time steps to integrate over.
+
+# Keyword arguments
+- `alg`: The ODE algorithm (default: `Tsit5()`). Any algorithm from OrdinaryDiffEq.jl can be
+  given, its package must then be loaded by the user.
+- `abstol`, `reltol` (`Real`): Absolute and relative tolerances of the ODE solver
+  (default: `1e-8` and `1e-6`, the same as `QuantumToolbox.mesolve`).
+- `kwargs...`: Other options of the SciML `solve`, e.g. `maxiters`.
 
 # Returns
 - `result` ([`PimSolution`](@ref)): The result of the evolution; the times and states are stored in
@@ -378,7 +385,7 @@ sol = pisolve(system, rho0, LinRange(0, 10, 100))
 sol.states[end]
 ```
 """
-function pisolve(d::Dicke, initial_state::QuantumObject, tlist)
+function pisolve(d::Dicke, initial_state::QuantumObject, tlist; kwargs...)
     if size(initial_state.data) != d.dshape
         msg = "Initial density matrix should have size $(d.dshape), got $(size(initial_state.data))."
         throw(ArgumentError(msg))
@@ -405,7 +412,7 @@ function pisolve(d::Dicke, initial_state::QuantumObject, tlist)
     end
 
     pim = Pim(d.N, emission=d.emission, dephasing=d.dephasing, pumping=d.pumping, collective_emission=d.collective_emission, collective_pumping=d.collective_pumping, collective_dephasing=d.collective_dephasing)
-    result = solve(pim, initial_state, tlist)
+    result = solve(pim, initial_state, tlist; kwargs...)
     return result
 end
 

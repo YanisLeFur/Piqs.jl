@@ -1,0 +1,59 @@
+cff-version: 1.2.0
+message: >-
+  If you use PIQSolver.jl in your research, please cite the original PIQS paper
+  (preferred citation below) and, if relevant, this software.
+title: "PIQSolver.jl: Permutational Invariant Quantum Solver in Julia"
+type: software
+authors:
+  - family-names: Le Fur
+    given-names: Yanis
+    email: yanis.lefur@gmail.com
+version: 0.1.0
+license: BSD-3-Clause
+repository-code: "https://github.com/YanisLeFur/PIQSolver.jl"
+url: "https://yanislefur.github.io/PIQSolver.jl/dev/"
+abstract: >-
+  PIQSolver.jl simulates the open-system dynamics of ensembles of N identical
+  two-level systems with local and collective dissipation, using the
+  permutational symmetry of the Dicke basis to reduce the dimension of the
+  problem from 2^N to O(N^2). It is a Julia port of PIQS, built on
+  QuantumToolbox.jl.
+keywords:
+  - quantum physics
+  - open quantum systems
+  - Dicke states
+  - permutational invariance
+  - superradiance
+  - Julia
+references:
+  - type: software
+    title: PIQS
+    authors:
+      - family-names: Shammah
+        given-names: Nathan
+      - family-names: Ahmed
+        given-names: Shahnawaz
+    repository-code: "https://github.com/nathanshammah/piqs"
+    license: BSD-3-Clause
+preferred-citation:
+  type: article
+  title: >-
+    Open quantum systems with local and collective incoherent processes:
+    Efficient numerical simulations using permutational invariance
+  authors:
+    - family-names: Shammah
+      given-names: Nathan
+    - family-names: Ahmed
+      given-names: Shahnawaz
+    - family-names: Lambert
+      given-names: Neill
+    - family-names: De Liberato
+      given-names: Simone
+    - family-names: Nori
+      given-names: Franco
+  journal: Physical Review A
+  volume: 98
+  issue: 6
+  start: "063815"
+  year: 2018
+  doi: 10.1103/PhysRevA.98.063815
