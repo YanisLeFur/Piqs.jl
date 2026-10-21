@@ -334,7 +334,8 @@ which is integrated with the permutational invariant matrix [`Pim`](@ref).
 - `tlist` (`AbstractVector`): The time steps to integrate over.
 
 # Returns
-- `result` (`TimeEvolutionSol`): The result of the evolution; the states are stored in `result.states`.
+- `result` ([`PimSolution`](@ref)): The result of the evolution; the times and states are stored in
+  `result.times` and `result.states`.
 
 # Throws
 - `ArgumentError` if the initial state or the Hamiltonian is not diagonal.
