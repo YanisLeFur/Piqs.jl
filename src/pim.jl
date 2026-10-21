@@ -204,9 +204,13 @@ function Base.show(io::IO, sol::PimSolution)
 end
 
 """
-    solve(p::Pim, rho0, tlist; alg=Tsit5(), abstol=1e-8, reltol=1e-6, kwargs...)
+    PIQSolver.solve(p::Pim, rho0, tlist; alg=Tsit5(), abstol=1e-8, reltol=1e-6, kwargs...)
 
 Solve the ODE for the evolution of diagonal states and Hamiltonians.
+
+This is the internal backend of [`pisolve`](@ref) and is not exported. It does not check
+that `rho0` has the right size or is diagonal, so a non-diagonal state silently loses its
+coherences. Use [`pisolve`](@ref) instead.
 
 The default tolerances are those of `QuantumToolbox.mesolve`. `alg` and any other keyword
 argument are passed to the SciML `solve` (OrdinaryDiffEq.jl's common solver options).
