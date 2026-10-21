@@ -12,8 +12,8 @@ independent emitters.
 using PIQSolver, QuantumToolbox
 
 N = 20
-jz = jspin(N, op="z")
-jp, jm = jspin(N, op="+"), jspin(N, op="-")
+jz = jspin(N, op=:z)
+jp, jm = jspin(N, op=:+), jspin(N, op=:-)
 
 rho0 = dicke(N, N / 2, N / 2)
 tlist = LinRange(0, 1, 200)
@@ -81,7 +81,7 @@ equation:
 using PIQSolver, QuantumToolbox
 
 N = 6
-jz = jspin(N, op="z")
+jz = jspin(N, op=:z)
 system = Dicke(N, hamiltonian=jz, emission=0.5, pumping=0.1, dephasing=0.2)
 rho0 = dicke(N, N / 2, N / 2)
 tlist = LinRange(0, 5, 50)
@@ -104,8 +104,8 @@ Matrix(M)
 ## Checking against the uncoupled basis
 
 For small ``N``, the permutational-invariant result can be checked against a
-brute-force simulation in the full ``2^N`` dimensional space. [`c_ops`](@ref) (or
-[`collapse_uncoupled`](@ref)) builds the corresponding collapse operators:
+brute-force simulation in the full ``2^N`` dimensional space. [`collapse_uncoupled`](@ref)
+builds the corresponding collapse operators from a `Dicke` system:
 
 ```@example uncoupled
 using PIQSolver, QuantumToolbox
@@ -116,15 +116,15 @@ tlist = LinRange(0, 3, 30)
 
 # permutational invariant (Dicke basis, 9 states)
 system = Dicke(N; rates...)
-jz = jspin(N, op="z")
+jz = jspin(N, op=:z)
 sol_dicke = mesolve(liouvillian_dicke(system), dicke(N, N / 2, N / 2), tlist,
                     e_ops=[jz], progress_bar=Val(false))
 
 # brute force (uncoupled basis, 2^N = 16 states)
-jz_u = jspin(N, op="z", basis="uncoupled")
+jz_u = jspin(N, op=:z, basis=:uncoupled)
 psi0 = tensor(fill(basis(2, 0), N)...)       # all spins up
 H0 = 0 * jz_u
-sol_full = mesolve(H0, ket2dm(psi0), tlist, c_ops(system),
+sol_full = mesolve(H0, ket2dm(psi0), tlist, collapse_uncoupled(system),
                    e_ops=[jz_u], progress_bar=Val(false))
 
 maximum(abs.(real.(sol_dicke.expect[1, :]) .- real.(sol_full.expect[1, :])))
@@ -143,8 +143,8 @@ using PIQSolver, QuantumToolbox
 N = 6
 nphot = 10
 nds = num_dicke_states(N)
-jz = jspin(N, op="z")
-jp, jm = jspin(N, op="+"), jspin(N, op="-")
+jz = jspin(N, op=:z)
+jp, jm = jspin(N, op=:+), jspin(N, op=:-)
 a = destroy(nphot)
 
 # incoherently pumped spins with local losses

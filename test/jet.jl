@@ -6,7 +6,7 @@ using JET
 
     # the main computations must stay type-stable (no runtime dispatch)
     N = 4
-    d = Dicke(N, hamiltonian=jspin(N, op="z"), emission=1.0, dephasing=0.5, collective_emission=1.0)
+    d = Dicke(N, hamiltonian=jspin(N, op=:z), emission=1.0, dephasing=0.5, collective_emission=1.0)
     p = Pim(N, emission=1.0, dephasing=0.5, pumping=0.2)
     rho0 = dicke(N, 2, 2)
     @test_opt target_modules = (PIQSolver,) Dicke(N, emission=1.0)

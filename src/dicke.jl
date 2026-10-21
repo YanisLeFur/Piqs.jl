@@ -280,9 +280,16 @@ The (j, m, m1) values are mapped to the (i, k) index of a block
 diagonal matrix which has the structure to capture the permutationally
 symmetric part of the density matrix. For each (j, m, m1) value, first
 we get the block by using the "j" value and then the addition in the
-row/column due to the m and m1 is determined. Four dictionaries are
-returned giving a map from the (j, m, m1) values to (i, k), the inverse
-map, a flattened map and the inverse of the flattened map.
+row/column due to the m and m1 is determined.
+
+# Returns
+A `NamedTuple` of four dictionaries:
+- `index_to_jmm1`: (i, k) => (j, m, m1),
+- `jmm1_to_index`: (j, m, m1) => (i, k),
+- `flat_to_jmm1`: l => (j, m, m1), with l = nds * i + k the flattened index,
+- `jmm1_to_flat`: (j, m, m1) => l.
+
+The indices are 0-based, as in PIQS.
 """
 function jmm1_dictionary(N::Number)
 
@@ -307,7 +314,7 @@ function jmm1_dictionary(N::Number)
             end
         end
     end
-    return [jmm1_dict, jmm1_inv, jmm1_flat, jmm1_flat_inv]
+    return (index_to_jmm1=jmm1_dict, jmm1_to_index=jmm1_inv, flat_to_jmm1=jmm1_flat, jmm1_to_flat=jmm1_flat_inv)
 end
 
 
@@ -336,7 +343,7 @@ which is integrated with the permutational invariant matrix [`Pim`](@ref).
 ```julia
 using PIQSolver, QuantumToolbox
 N = 4
-system = Dicke(N, hamiltonian=jspin(N, op="z"), emission=0.1)
+system = Dicke(N, hamiltonian=jspin(N, op=:z), emission=0.1)
 rho0 = dicke(N, N / 2, N / 2)          # fully excited state
 sol = pisolve(system, rho0, LinRange(0, 10, 100))
 sol.states[end]
@@ -367,14 +374,18 @@ function pisolve(d::Dicke, initial_state::QuantumObject, tlist)
 end
 
 """
-    c_ops(d::Dicke)
+    collapse_uncoupled(d::Dicke)
 
-Build collapse operators in the full Hilbert space 2^N.
+Build the collapse operators of `d` in the full ``2^N`` Hilbert space.
+
+Equivalent to `collapse_uncoupled(d.N; ...)` with the rates of `d`. The operators can be
+given to `QuantumToolbox.mesolve` together with a Hamiltonian in the uncoupled basis
+(see [`jspin`](@ref) with `basis=:uncoupled`), to cross-check the Dicke-basis dynamics.
 
 # Returns
-- `c_ops_list` (`Vector`): The list with the collapse operators in the 2^N Hilbert space.
+- `c_ops` (`Vector{QuantumObject}`): The collapse operators in the 2^N Hilbert space.
 """
-function c_ops(d::Dicke)::Vector
+function collapse_uncoupled(d::Dicke)
     return collapse_uncoupled(d.N, emission=d.emission, dephasing=d.dephasing, pumping=d.pumping, collective_emission=d.collective_emission, collective_dephasing=d.collective_dephasing, collective_pumping=d.collective_pumping)
 end
 

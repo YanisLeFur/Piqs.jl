@@ -7,11 +7,11 @@ using OrdinaryDiffEqTsit5: ODEProblem, Tsit5
 import OrdinaryDiffEqTsit5: solve
 
 # system
-export Dicke, Pim, lindbladian, liouvillian_dicke, pisolve, c_ops, coefficient_matrix
+export Dicke, Pim, lindbladian, liouvillian_dicke, pisolve, coefficient_matrix
 # operators and states
 export jspin, spin_algebra, collapse_uncoupled, dicke, dicke_basis, super_tensor
 # Dicke space utilities
-export num_dicke_states, num_dicke_ladders, num_tls, j_vals, m_vals, isdiagonal
+export num_dicke_states, num_dicke_ladders, num_tls, j_vals, m_vals
 export energy_degeneracy, state_degeneracy, m_degeneracy
 
 include("dicke.jl")

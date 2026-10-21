@@ -1,6 +1,10 @@
 BSD 3-Clause License
 
 Copyright (c) 2025, Yanis Le Fur
+Copyright (c) 2018, Nathan Shammah and Shahnawaz Ahmed
+
+PIQSolver.jl is a Julia translation of PIQS (https://github.com/nathanshammah/piqs),
+which is distributed under the BSD 3-Clause License with the copyright notice above.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:

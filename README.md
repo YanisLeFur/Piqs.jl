@@ -47,7 +47,7 @@ and Liouvillians are `QuantumObject`s that you can pass directly to `mesolve`, `
 - **Composite systems**: tensor products of superoperators of different dimensions
   (`super_tensor`), for example to couple the ensemble to a cavity mode.
 - **Brute-force cross-checks**: collapse operators in the full 2^N space
-  (`collapse_uncoupled`, `c_ops`).
+  (`collapse_uncoupled`).
 
 ## Installation
 
@@ -67,8 +67,8 @@ emitting a burst of light whose peak intensity scales as N².
 using PIQSolver, QuantumToolbox
 
 N = 20
-jz = jspin(N, op="z")
-jp, jm = jspin(N, op="+"), jspin(N, op="-")
+jz = jspin(N, op=:z)
+jp, jm = jspin(N, op=:+), jspin(N, op=:-)
 
 # collective emission at rate 1, with a weak local emission
 system = Dicke(N, collective_emission=1.0, emission=0.05)
@@ -139,4 +139,6 @@ by Nathan Shammah and Shahnawaz Ahmed, and builds on
 
 ## License
 
-PIQSolver.jl is released under the [BSD 3-Clause License](LICENSE).
+PIQSolver.jl is released under the [BSD 3-Clause License](LICENSE). It is a translation of
+[PIQS](https://github.com/nathanshammah/piqs), © 2018 Nathan Shammah and Shahnawaz Ahmed,
+also BSD 3-Clause; the original copyright notice is kept in the [LICENSE](LICENSE).

@@ -11,7 +11,6 @@ Dicke
 lindbladian
 liouvillian_dicke
 pisolve
-c_ops
 coefficient_matrix
 Pim
 ```
@@ -45,7 +44,6 @@ num_dicke_ladders
 num_tls
 j_vals
 m_vals
-isdiagonal
 energy_degeneracy
 state_degeneracy
 m_degeneracy
@@ -62,6 +60,7 @@ called with the `PIQSolver.` prefix, e.g. `PIQSolver.jmm1_dictionary(N)`.
 get_blocks
 get_index
 jmm1_dictionary
+isdiagonal
 ap
 am
 _jspin_uncoupled

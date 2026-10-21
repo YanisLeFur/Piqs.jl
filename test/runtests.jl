@@ -1,6 +1,6 @@
 using PIQSolver
 # internals, not exported
-using PIQSolver: get_blocks, get_index, jmm1_dictionary, ap, am, isdicke, calculate_k, calculate_j_m,
+using PIQSolver: isdiagonal, get_blocks, get_index, jmm1_dictionary, ap, am, isdicke, calculate_k, calculate_j_m,
     gamma1, gamma2, gamma3, gamma4, gamma5, gamma6, gamma7, gamma8, gamma9,
     tau1, tau2, tau3, tau4, tau5, tau6, tau7, tau8, tau9
 using Test
@@ -132,6 +132,8 @@ end
 
 @testset "jmm1_dictionary" begin
     d1, d2, d3, d4 = jmm1_dictionary(1)
+    @test keys(jmm1_dictionary(1)) == (:index_to_jmm1, :jmm1_to_index, :flat_to_jmm1, :jmm1_to_flat)
+    @test jmm1_dictionary(1).index_to_jmm1 == d1
 
     d1_hardcoded = Dict((0, 0) => (0.5, 0.5, 0.5), (0, 1) => (0.5, 0.5, -0.5),
         (1, 0) => (0.5, -0.5, 0.5), (1, 1) => (0.5, -0.5, -0.5))
@@ -469,18 +471,18 @@ end
         0.0+0im 0.0+0im 0.0+0im 0.0+0im;
         0.0+0im 0.0+0im 1.0+0im 0.0+0im]
 
-    @test spin_algebra(2, "x")[1].data == sx1
-    @test spin_algebra(2, "x")[2].data == sx2
-    @test spin_algebra(2, "y")[1].data == sy1
-    @test spin_algebra(2, "y")[2].data == sy2
-    @test spin_algebra(2, "z")[1].data == sz1
-    @test spin_algebra(2, "z")[2].data == sz2
-    @test spin_algebra(2, "+")[1].data == sp1
-    @test spin_algebra(2, "+")[2].data == sp2
-    @test spin_algebra(2, "-")[1].data == sm1
-    @test spin_algebra(2, "-")[2].data == sm2
+    @test spin_algebra(2, :x)[1].data == sx1
+    @test spin_algebra(2, :x)[2].data == sx2
+    @test spin_algebra(2, :y)[1].data == sy1
+    @test spin_algebra(2, :y)[2].data == sy2
+    @test spin_algebra(2, :z)[1].data == sz1
+    @test spin_algebra(2, :z)[2].data == sz2
+    @test spin_algebra(2, :+)[1].data == sp1
+    @test spin_algebra(2, :+)[2].data == sp2
+    @test spin_algebra(2, :-)[1].data == sm1
+    @test spin_algebra(2, :-)[2].data == sm2
 
-    @test_throws DomainError spin_algebra(2, "q")
+    @test_throws ArgumentError spin_algebra(2, :q)
 
 end
 c1 = Qobj([0 0 0 0; 0 0 0 0; 1 0 0 0;
@@ -500,7 +502,7 @@ collapse_uncoupled(2, emission=1)
     true_c_ops = [c1, c2]
     @test true_c_ops == collapse_uncoupled(2, emission=1)
     system = Dicke(2, emission=1)
-    @test (true_c_ops == c_ops(system))
+    @test (true_c_ops == collapse_uncoupled(system))
 end
 
 @testset "dicke_basis" begin
@@ -685,7 +687,7 @@ end
         collective_dephasing=0.4, collective_pumping=0.25)
     tlist = LinRange(0, 3, 31)
     for N in [3, 4]
-        system = Dicke(N; hamiltonian=jspin(N, op="z"), rates...)
+        system = Dicke(N; hamiltonian=jspin(N, op=:z), rates...)
         rho0 = dicke(N, N / 2, N / 2)
         pi_sol = pisolve(system, rho0, tlist)
         me_sol = mesolve(liouvillian_dicke(system), rho0, tlist, progress_bar=Val(false))
@@ -729,10 +731,10 @@ end
 @testset "jspin dicke basis" begin
     for N in [1, 2, 3, 4]
         jx, jy, jz = jspin(N)
-        jp, jm = jspin(N, op="+"), jspin(N, op="-")
-        @test jspin(N, op="x") == jx
-        @test jspin(N, op="y") == jy
-        @test jspin(N, op="z") == jz
+        jp, jm = jspin(N, op=:+), jspin(N, op=:-)
+        @test jspin(N, op=:x) == jx
+        @test jspin(N, op=:y) == jy
+        @test jspin(N, op=:z) == jz
         @test isapprox(jp, jx + 1im * jy)
         @test isapprox(jm, jx - 1im * jy)
         @test isapprox(jm, jp')
@@ -745,34 +747,36 @@ end
         expected = vcat([fill(j * (j + 1), Int(2j + 1)) for j in reverse(j_vals(N))]...)
         @test isapprox(Matrix(j2.data), diagm(expected), atol=1e-12)
     end
-    @test_throws DomainError jspin(2, op="q")
+    @test_throws ArgumentError jspin(2, op=:q)
+    @test_throws ArgumentError jspin(2, basis=:foo)
+    @test_throws TypeError jspin(2, op="z")
 end
 
 @testset "jspin uncoupled basis" begin
     N = 3
-    jx, jy, jz = jspin(N, basis="uncoupled")
-    @test jspin(N, op="x", basis="uncoupled") == jx
-    @test jspin(N, op="y", basis="uncoupled") == jy
-    @test jspin(N, op="z", basis="uncoupled") == jz
-    @test jx == sum(spin_algebra(N, "x"))
-    @test jy == sum(spin_algebra(N, "y"))
-    @test jz == sum(spin_algebra(N, "z"))
-    @test jspin(N, op="+", basis="uncoupled") == sum(spin_algebra(N, "+"))
-    @test jspin(N, op="-", basis="uncoupled") == sum(spin_algebra(N, "-"))
+    jx, jy, jz = jspin(N, basis=:uncoupled)
+    @test jspin(N, op=:x, basis=:uncoupled) == jx
+    @test jspin(N, op=:y, basis=:uncoupled) == jy
+    @test jspin(N, op=:z, basis=:uncoupled) == jz
+    @test jx == sum(spin_algebra(N, :x))
+    @test jy == sum(spin_algebra(N, :y))
+    @test jz == sum(spin_algebra(N, :z))
+    @test jspin(N, op=:+, basis=:uncoupled) == sum(spin_algebra(N, :+))
+    @test jspin(N, op=:-, basis=:uncoupled) == sum(spin_algebra(N, :-))
     @test size(jx) == (2^N, 2^N)
     # the spectrum of jz in the uncoupled basis contains the dicke values with degeneracies
     vals = round.(real.(eigvals(Matrix(jz.data))), digits=10)
     for m in m_vals(N / 2)
         @test count(==(m), vals) == energy_degeneracy(N, m)
     end
-    @test_throws DomainError jspin(2, op="q", basis="uncoupled")
+    @test_throws ArgumentError jspin(2, op=:q, basis=:uncoupled)
 end
 
 @testset "spin_algebra default" begin
     sx, sy, sz = spin_algebra(2)
-    @test sx == spin_algebra(2, "x")
-    @test sy == spin_algebra(2, "y")
-    @test sz == spin_algebra(2, "z")
+    @test sx == spin_algebra(2, :x)
+    @test sy == spin_algebra(2, :y)
+    @test sz == spin_algebra(2, :z)
 end
 
 @testset "collapse_uncoupled all rates" begin
@@ -781,12 +785,12 @@ end
         collective_dephasing=0.4, collective_pumping=0.25)
     ops = collapse_uncoupled(N; g...)
     @test length(ops) == 3 * N + 3
-    @test ops[1:N] == [sqrt(g.emission) * op for op in spin_algebra(N, "-")]
-    @test ops[N+1:2N] == [sqrt(g.dephasing) * op for op in spin_algebra(N, "z")]
-    @test ops[2N+1:3N] == [sqrt(g.pumping) * op for op in spin_algebra(N, "+")]
-    @test ops[3N+1] == sqrt(g.collective_emission) * jspin(N, op="-", basis="uncoupled")
-    @test ops[3N+2] == sqrt(g.collective_dephasing) * jspin(N, op="z", basis="uncoupled")
-    @test ops[3N+3] == sqrt(g.collective_pumping) * jspin(N, op="+", basis="uncoupled")
+    @test ops[1:N] == [sqrt(g.emission) * op for op in spin_algebra(N, :-)]
+    @test ops[N+1:2N] == [sqrt(g.dephasing) * op for op in spin_algebra(N, :z)]
+    @test ops[2N+1:3N] == [sqrt(g.pumping) * op for op in spin_algebra(N, :+)]
+    @test ops[3N+1] == sqrt(g.collective_emission) * jspin(N, op=:-, basis=:uncoupled)
+    @test ops[3N+2] == sqrt(g.collective_dephasing) * jspin(N, op=:z, basis=:uncoupled)
+    @test ops[3N+3] == sqrt(g.collective_pumping) * jspin(N, op=:+, basis=:uncoupled)
     @test isempty(collapse_uncoupled(N))
     @test_logs (:warn,) collapse_uncoupled(11)
 end
@@ -796,14 +800,14 @@ end
     N = 2
     rates = (emission=0.3, dephasing=0.2, pumping=0.1, collective_emission=0.5,
         collective_dephasing=0.4, collective_pumping=0.25)
-    system = Dicke(N; hamiltonian=jspin(N, op="x"), rates...)
+    system = Dicke(N; hamiltonian=jspin(N, op=:x), rates...)
     tlist = LinRange(0, 3, 31)
     sol_dicke = mesolve(liouvillian_dicke(system), dicke(N, 1.0, 1.0), tlist, progress_bar=Val(false))
     psi0 = tensor(basis(2, 0), basis(2, 0))
-    sol_full = mesolve(jspin(N, op="x", basis="uncoupled"), ket2dm(psi0), tlist, c_ops(system),
+    sol_full = mesolve(jspin(N, op=:x, basis=:uncoupled), ket2dm(psi0), tlist, collapse_uncoupled(system),
         progress_bar=Val(false))
-    jz_dicke = real.(expect(jspin(N, op="z"), sol_dicke.states))
-    jz_full = real.(expect(jspin(N, op="z", basis="uncoupled"), sol_full.states))
+    jz_dicke = real.(expect(jspin(N, op=:z), sol_dicke.states))
+    jz_full = real.(expect(jspin(N, op=:z, basis=:uncoupled), sol_full.states))
     @test isapprox(jz_dicke, jz_full, atol=1e-6)
 end
 
