@@ -167,9 +167,38 @@ function _push_tau!(entries, p::Pim, tau, k::Int, dicke_row::Int, dicke_col::Int
 end
 
 """
+    PimSolution
+
+The result of [`pisolve`](@ref).
+
+# Fields
+- `times` (`AbstractVector`): The time points at which the states are stored.
+- `states` (`Vector{QuantumObject}`): The density matrices in the Dicke basis at each time of `times`.
+  They are diagonal and stored as sparse matrices.
+- `retcode`: The return code of the ODE solver (`SciMLBase.ReturnCode`).
+- `alg`: The ODE algorithm used.
+
+The `states` can be given directly to `QuantumToolbox.expect`, e.g.
+`expect(jspin(N, op=:z), sol.states)`.
+"""
+struct PimSolution{TT<:AbstractVector{<:Real},TS<:AbstractVector{<:QuantumObject},RT,AT}
+    times::TT
+    states::TS
+    retcode::RT
+    alg::AT
+end
+
+function Base.show(io::IO, sol::PimSolution)
+    print(io, "PimSolution with $(length(sol.states)) states (return code: $(sol.retcode))")
+end
+
+"""
     solve(p::Pim, rho0, tlist)
 
 Solve the ODE for the evolution of diagonal states and Hamiltonians.
+
+# Returns
+- `result` ([`PimSolution`](@ref)): The time points and the diagonal density matrices.
 """
 function solve(p::Pim, rho0, tlist)
     L = coefficient_matrix(p)
@@ -180,7 +209,7 @@ function solve(p::Pim, rho0, tlist)
     # the states stay diagonal, so store them sparse instead of as dense nds × nds matrices
     dims = rho0 isa QuantumObject ? rho0.dims : size(rho0, 1)
     output_states = [Qobj(spdiagm(0 => r), dims=dims) for r in sol.u]
-    return TimeEvolutionSol(tlist, sol.t, output_states, nothing, sol.retcode, sol.alg, NaN, NaN)
+    return PimSolution(sol.t, output_states, sol.retcode, sol.alg)
 end
 
 _pim_rhs!(dp, p, M, t) = mul!(dp, M, p)

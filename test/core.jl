@@ -342,6 +342,10 @@ end
     true_diag_sol = [0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.11627208 0.0 0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0 0.3995764 0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0 0.0 0.0 0.13533528 0.0 0.0; 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.34881625 0.0; 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0]
     @test isapprox(Matrix(diag_sol.states[end].data), true_diag_sol, atol=1e-6)
     @test length(diag_sol.states) == length(tlist)
+    @test diag_sol isa PimSolution
+    @test diag_sol.times ≈ tlist
+    @test string(diag_sol.retcode) == "Success"
+    @test occursin("PimSolution with $(length(tlist)) states", sprint(show, diag_sol))
     jz_me = expect(jz, mesolve(liouvillian_dicke(diag_system), diag_initial_state, tlist, progress_bar=Val(false)).states)
     @test isapprox(real.(expect(jz, diag_sol.states)), real.(jz_me), atol=1e-5)
 
@@ -846,5 +850,3 @@ end
     @test isapprox(sol_td.expect, sol.expect, atol=1e-6)
 end
 
-include("aqua.jl")
-include("jet.jl")

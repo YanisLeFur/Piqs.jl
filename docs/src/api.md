@@ -11,6 +11,7 @@ Dicke
 lindbladian
 liouvillian_dicke
 pisolve
+PimSolution
 coefficient_matrix
 Pim
 ```
