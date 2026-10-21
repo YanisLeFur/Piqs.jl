@@ -7,7 +7,7 @@ type: software
 authors:
   - family-names: Le Fur
     given-names: Yanis
-    email: yanis.lefur@gmail.com
+    email: yanis.lefur@csic.es
 version: 0.1.0
 license: BSD-3-Clause
 repository-code: "https://github.com/YanisLeFur/PIQSolver.jl"

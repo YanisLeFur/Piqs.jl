@@ -1,7 +1,7 @@
 name = "PIQSolver"
 uuid = "18c821f0-cbdb-4973-8466-97967e7790ff"
 version = "0.1.0"
-authors = ["Yanis Le Fur <yanis.lefur@gmail.com>"]
+authors = ["Yanis Le Fur <yanis.lefur@csic.es>"]
 
 [deps]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
@@ -12,9 +12,9 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 [compat]
 Aqua = "0.8"
 LinearAlgebra = "1.10"
-OrdinaryDiffEqTsit5 = "1.1, 2"
+OrdinaryDiffEqTsit5 = "1.12, 2"
 Pkg = "1.10"
-QuantumToolbox = "0.43 - 0.51"
+QuantumToolbox = "0.45 - 0.51"
 SparseArrays = "1.10"
 Test = "1.10"
 julia = "1.10"
