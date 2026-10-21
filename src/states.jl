@@ -10,13 +10,13 @@ and the state is represented as a density matrix of size (nds, nds) or
 
 # Arguments
 - `N` (`Integer`): The number of two-level systems.
-- `j` (`AbstractFloat`): The eigenvalue j of the Dicke state (j, m).
-- `m` (`AbstractFloat`): The eigenvalue m of the Dicke state (j, m).
+- `j` (`Real`): The eigenvalue j of the Dicke state (j, m).
+- `m` (`Real`): The eigenvalue m of the Dicke state (j, m).
 
 # Returns
 - `rho` (`QuantumObject`): The density matrix.
 """
-function dicke(N::Integer, j::Number, m::Number)::QuantumObject
+function dicke(N::Integer, j::Number, m::Number)
     nds = num_dicke_states(N)
     i, k = _dicke_index(N, j, m, m, get_blocks(N))
     return Qobj(sparse([i], [k], [1.0], nds, nds))
@@ -42,7 +42,7 @@ the given dictionary of coefficients for each (j, m, m1).
 # Returns
 - `rho` (`QuantumObject`): The density matrix in the Dicke basis.
 """
-function dicke_basis(N::Integer, jmm1::Union{Dict,Nothing}=nothing)::QuantumObject
+function dicke_basis(N::Integer, jmm1::Union{Dict,Nothing}=nothing)
     if isnothing(jmm1) || isempty(jmm1)
         msg = "Please specify the jmm1 values as a dictionary, e.g. "
         msg *= "Dict((N/2, N/2, N/2) => 1.0) for the excited state, "
