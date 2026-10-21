@@ -47,16 +47,19 @@ Calculate the number of two-level systems.
 
 # Returns
 - `N` (`Integer`): The number of two-level systems.
+
+# Throws
+- `DomainError` if `nds` is not the number of Dicke states of any N ≥ 1.
 """
-function num_tls(nds::Integer)::Integer
-    if isinteger(sqrt(nds))
-        # N is even
-        N = 2 * (sqrt(nds) - 1)
-    else
-        # N is odd
-        N = 2 * (sqrt(nds + 1 / 4) - 1)
+function num_tls(nds::Integer)::Int
+    # nds = ((N + 2)^2 - N % 2) / 4, so (N + 2)^2 is 4 nds (N even) or 4 nds + 1 (N odd)
+    for s2 in (4 * nds, 4 * nds + 1)
+        s = isqrt(s2)
+        if s2 > 0 && s^2 == s2 && s - 2 >= 1
+            return s - 2
+        end
     end
-    return trunc(Int, N)
+    throw(DomainError(nds, "$nds is not the number of Dicke states of N ≥ 1 two-level systems."))
 end
 
 """
@@ -132,13 +135,36 @@ struct Dicke{T<:Real,H}
     dshape::Tuple{Int,Int}
 end
 
-function Dicke(N::Integer; hamiltonian=nothing, emission::Real=0.0, dephasing::Real=0.0, pumping::Real=0.0,
-    collective_emission::Real=0.0, collective_dephasing::Real=0.0, collective_pumping::Real=0.0)
-    rates = promote(float(emission), float(dephasing), float(pumping),
-        float(collective_emission), float(collective_dephasing), float(collective_pumping))
+function Dicke(N::Integer; hamiltonian=nothing, emission::Real=0, dephasing::Real=0, pumping::Real=0,
+    collective_emission::Real=0, collective_dephasing::Real=0, collective_pumping::Real=0)
+    # integer defaults, so that the rates given by the user set the element type
+    rates = float.(promote(emission, dephasing, pumping,
+        collective_emission, collective_dephasing, collective_pumping))
+    _check_rates(rates)
     nds = num_dicke_states(N)
+    _check_hamiltonian(hamiltonian, nds)
     return Dicke{eltype(rates),typeof(hamiltonian)}(N, hamiltonian, rates..., nds, (nds, nds))
 end
+
+const _RATE_NAMES = (:emission, :dephasing, :pumping, :collective_emission, :collective_dephasing, :collective_pumping)
+
+# rates in the order of `_RATE_NAMES`; they multiply Lindblad dissipators, so they must be non-negative
+function _check_rates(rates)
+    for (name, rate) in zip(_RATE_NAMES, rates)
+        rate >= 0 || throw(DomainError(rate, "The rate `$name` must be non-negative."))
+    end
+    return nothing
+end
+
+_check_hamiltonian(::Nothing, nds) = nothing
+function _check_hamiltonian(H::AbstractQuantumObject, nds)
+    isoper(H) || throw(ArgumentError("The Hamiltonian must be an operator."))
+    size(H) == (nds, nds) || throw(DimensionMismatch(
+        "The Hamiltonian must be ($nds, $nds) in the Dicke basis, got $(size(H)). Build it with `jspin`."))
+    return nothing
+end
+_check_hamiltonian(H, nds) = throw(ArgumentError(
+    "The Hamiltonian must be a `QuantumObject` or a `QuantumObjectEvolution`, got a $(typeof(H))."))
 
 function Base.show(io::IO, d::Dicke)
     println(io, "N = $(d.N)")
@@ -223,7 +249,7 @@ end
 Get all the possible values of m or m1 for given j.
 
 # Arguments
-- `N` (`Integer`): The number of two-level systems.
+- `j` (`Real`): The total spin j (integer or half-integer).
 
 # Returns
 - `mvals` (`Array`): The m values for given j as a 1D array.
@@ -239,11 +265,12 @@ end
 Get the index in the density matrix for this j, m, m1 value.
 
 # Arguments
-- `N` (`Integer`): The number of two-level systems. j, m, m1: float The j, m, m1 values.
+- `N` (`Integer`): The number of two-level systems.
+- `j`, `m`, `m1` (`Real`): The j, m, m1 values.
 - `blocks` (`Vector`): An 1D array with the number of cumulative elements at the boundary of each block.
 
 # Returns
-- `mvals` (`Vector`): The m values for given j.
+- `(i, k)` (`Tuple{Int,Int}`): The 0-based (row, column) index of the element in the density matrix.
 """
 function get_index(N, j, m, m1, blocks)
     _k = Int(j - m1)
@@ -338,7 +365,7 @@ which is integrated with the permutational invariant matrix [`Pim`](@ref).
   `result.times` and `result.states`.
 
 # Throws
-- `ArgumentError` if the initial state or the Hamiltonian is not diagonal.
+- `ArgumentError` if the initial state or the Hamiltonian is not diagonal, or if the Hamiltonian is time-dependent.
 
 # Example
 ```julia
@@ -355,6 +382,12 @@ function pisolve(d::Dicke, initial_state::QuantumObject, tlist)
         msg = "`pisolve` requires a diagonal initial density matrix. "
         msg *= "In general, construct the Liouvillian using `liouvillian_dicke`"
         msg *= " and use QuantumToolbox.mesolve."
+        throw(ArgumentError(msg))
+    end
+
+    if d.hamiltonian isa QuantumObjectEvolution
+        msg = "`pisolve` does not support time-dependent Hamiltonians. "
+        msg *= "Construct the Liouvillian using `liouvillian_dicke` and use `QuantumToolbox.mesolve`."
         throw(ArgumentError(msg))
     end
 

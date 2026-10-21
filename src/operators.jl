@@ -7,7 +7,7 @@ sparse matrix.
 # Returns
 - `lindblad_qobj` (`QuantumObject`): The matrix size is (nds², nds²) where nds is the number of Dicke states.
 """
-function lindbladian(d::Dicke)::QuantumObject
+function lindbladian(d::Dicke{T}) where {T}
     N = d.N
     nds = d.nds
     blocks = get_blocks(N)
@@ -17,7 +17,7 @@ function lindbladian(d::Dicke)::QuantumObject
     max_entries = 9 * sum(j -> Int(2 * j + 1)^2, jvalues)
     lindblad_row = sizehint!(Int[], max_entries)
     lindblad_col = sizehint!(Int[], max_entries)
-    lindblad_data = sizehint!(Float64[], max_entries)
+    lindblad_data = sizehint!(T[], max_entries)
     entries = (lindblad_row, lindblad_col, lindblad_data)
 
     for j in jvalues, m in m_vals(j), m1 in m_vals(j)
@@ -149,16 +149,16 @@ same energy.
 - `m` (`AbstractFloat`): Total spin z-axis projection eigenvalue (proportional to the total energy).
 
 # Returns
-- `degeneracy` (`Integer`): The m-degeneracy.
+- `degeneracy` (`Int`): The m-degeneracy, i.e. the number of j values with j ≥ |m|.
+
+# Throws
+- `DomainError` if m is not a valid value for N, i.e. |m| > N/2 or N/2 - m is not an integer.
 """
-function m_degeneracy(N::Integer, m::Number)::Integer
-    jvals = j_vals(N)
-    maxj = maximum(jvals)
-    if m < (-maxj)
-        throw(DomainError("m value is incorrect for this N. Minimum m value can be $(-maxj)"))
+function m_degeneracy(N::Integer, m::Number)::Int
+    if !(abs(m) <= N / 2 && isinteger(N / 2 - m))
+        throw(DomainError(m, "m value is incorrect for N = $N."))
     end
-    degeneracy = N / 2 + 1 - abs(m)
-    return trunc(Int, degeneracy)
+    return Int(N / 2 + 1 - abs(m))
 end
 
 
@@ -353,20 +353,19 @@ Thus the method is suitable only for small N (of the order of 10).
 
 # Arguments
 - `N` (`Integer`): The number of two-level systems.
-- `emission` (`AbstractFloat`): Incoherent emission coefficient (also nonradiative emission). (default: 0.0).
-- `dephasing` (`AbstractFloat`): Local dephasing coefficient. (default: 0.0).
-- `pumping` (`AbstractFloat`): Incoherent pumping coefficient. (default: 0.0).
-- `collective_emission` (`AbstractFloat`): Collective (superradiant) emission coefficient. (default: 0.0).
-- `collective_pumping` (`AbstractFloat`): Collective pumping coefficient. (default: 0.0).
-- `collective_dephasing` (`AbstractFloat`): Collective dephasing coefficient. (default: 0.0).
+- `emission` (`Real`): Incoherent emission coefficient (also nonradiative emission). (default: 0.0).
+- `dephasing` (`Real`): Local dephasing coefficient. (default: 0.0).
+- `pumping` (`Real`): Incoherent pumping coefficient. (default: 0.0).
+- `collective_emission` (`Real`): Collective (superradiant) emission coefficient. (default: 0.0).
+- `collective_pumping` (`Real`): Collective pumping coefficient. (default: 0.0).
+- `collective_dephasing` (`Real`): Collective dephasing coefficient. (default: 0.0).
 
 # Returns
 - `c_ops` (`Vector{QuantumObject}`): The Vector of collapse operators as `QuantumObject` for the system.
 """
-function collapse_uncoupled(N::Integer; emission::Union{AbstractFloat,Integer}=0.0, dephasing::Union{AbstractFloat,Integer}=0.0, pumping::Union{AbstractFloat,Integer}=0.0,
-    collective_emission::Union{AbstractFloat,Integer}=0.0, collective_dephasing::Union{AbstractFloat,Integer}=0.0,
-    collective_pumping::Union{AbstractFloat,Integer}=0.0)
-    N = trunc(Int, N)
+function collapse_uncoupled(N::Integer; emission::Real=0.0, dephasing::Real=0.0, pumping::Real=0.0,
+    collective_emission::Real=0.0, collective_dephasing::Real=0.0, collective_pumping::Real=0.0)
+    _check_rates((emission, dephasing, pumping, collective_emission, collective_dephasing, collective_pumping))
 
     if N > 10
         @warn "N > 10. dim(H) = 2^N. Better use `PIQSolver.lindbladian` to reduce Hilbert space dimension and exploit permutational symmetry."
@@ -377,7 +376,7 @@ function collapse_uncoupled(N::Integer; emission::Union{AbstractFloat,Integer}=0
     jz = jspin(N, op=:z, basis=:uncoupled)
     jp, jm = (jspin(N, op=:+, basis=:uncoupled),
         jspin(N, op=:-, basis=:uncoupled))
-    c_ops = []
+    c_ops = typeof(jm)[]
 
     for (coeff, op_list) in [(emission, sm), (dephasing, sz), (pumping, sp)]
         if coeff != 0

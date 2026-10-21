@@ -489,12 +489,6 @@ end
     @test_throws ArgumentError spin_algebra(2, :q)
 
 end
-c1 = Qobj([0 0 0 0; 0 0 0 0; 1 0 0 0;
-        0 1 0 0], dims=(2, 2))
-c2 = Qobj([0 0 0 0; 1 0 0 0; 0 0 0 0;
-        0 0 1 0], dims=(2, 2))
-true_c_ops = [c1, c2]
-collapse_uncoupled(2, emission=1)
 
 
 @testset "collapse_uncoupled" begin
@@ -850,3 +844,62 @@ end
     @test isapprox(sol_td.expect, sol.expect, atol=1e-6)
 end
 
+
+@testset "num_tls inverts num_dicke_states" begin
+    @test all(num_tls(num_dicke_states(N)) == N for N in 1:300)
+    @test num_tls(num_dicke_states(10^8)) == 10^8
+    for nds in (0, 1, 3, 5, 7, 8)
+        @test_throws DomainError num_tls(nds)
+    end
+end
+
+@testset "m_degeneracy validation" begin
+    # number of j values with j >= |m|
+    @test [m_degeneracy(4, m) for m in -2:2] == [1, 2, 3, 2, 1]
+    @test [m_degeneracy(3, m) for m in -1.5:1.5] == [1, 2, 2, 1]
+    @test m_degeneracy(4, 1) isa Int
+    @test_throws DomainError m_degeneracy(4, 3)
+    @test_throws DomainError m_degeneracy(4, -3)
+    @test_throws DomainError m_degeneracy(4, 0.5)
+    @test_throws DomainError m_degeneracy(3, 1)
+end
+
+@testset "rate validation" begin
+    for name in (:emission, :dephasing, :pumping, :collective_emission, :collective_dephasing, :collective_pumping)
+        kw = NamedTuple{(name,)}((-1.0,))
+        @test_throws DomainError Dicke(4; kw...)
+        @test_throws DomainError Pim(4; kw...)
+        @test_throws DomainError collapse_uncoupled(2; kw...)
+    end
+    @test_throws DomainError Pim(0)
+end
+
+@testset "Hamiltonian validation" begin
+    N = 4
+    @test_throws DimensionMismatch Dicke(N, hamiltonian=sigmaz())
+    @test_throws DimensionMismatch Dicke(N, hamiltonian=jspin(N, op=:z, basis=:uncoupled))
+    @test_throws ArgumentError Dicke(N, hamiltonian=dicke(N, 2, 2) |> x -> operator_to_vector(x))
+    @test_throws ArgumentError Dicke(N, hamiltonian=rand(9, 9))
+    H_td = QobjEvo(((jspin(N, op=:z), (p, t) -> 1.0),))
+    @test Dicke(N, hamiltonian=H_td).hamiltonian === H_td
+    @test_throws DimensionMismatch Dicke(N, hamiltonian=QobjEvo(((sigmaz(), (p, t) -> 1.0),)))
+    # a diagonal but time-dependent Hamiltonian is rejected by pisolve with a clear error
+    @test_throws ArgumentError pisolve(Dicke(N, hamiltonian=H_td, emission=1.0), dicke(N, 2, 2), [0.0, 1.0])
+end
+
+@testset "collapse_uncoupled rational rates and concrete eltype" begin
+    ops = collapse_uncoupled(2, emission=1 // 2, collective_emission=1)
+    @test length(ops) == 3
+    @test isconcretetype(eltype(ops))
+    @test ops[1] ≈ sqrt(0.5) * spin_algebra(2, :-)[1]
+    @test isconcretetype(eltype(collapse_uncoupled(Dicke(2, emission=1.0))))
+end
+
+@testset "element type follows the rates" begin
+    @test eltype(lindbladian(Dicke(3, emission=1.0f0, collective_emission=0.5f0)).data) == Float32
+    @test eltype(coefficient_matrix(Pim(3, emission=1.0f0))) == Float32
+    @test eltype(lindbladian(Dicke(3, emission=1.0)).data) == Float64
+    L32 = lindbladian(Dicke(3, emission=1.0f0, dephasing=0.3f0, pumping=0.2f0))
+    L64 = lindbladian(Dicke(3, emission=1.0, dephasing=0.3, pumping=0.2))
+    @test isapprox(Matrix(L32.data), Matrix(L64.data), rtol=1e-6)
+end

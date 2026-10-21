@@ -36,11 +36,14 @@ struct Pim{T<:Real}
     collective_pumping::T
 end
 
-function Pim(N::Integer; emission::Real=0.0, dephasing::Real=0.0, pumping::Real=0.0,
-    collective_emission::Real=0.0, collective_pumping::Real=0.0,
-    collective_dephasing::Real=0.0)
-    rates = promote(float(emission), float(dephasing), float(pumping),
-        float(collective_emission), float(collective_dephasing), float(collective_pumping))
+function Pim(N::Integer; emission::Real=0, dephasing::Real=0, pumping::Real=0,
+    collective_emission::Real=0, collective_pumping::Real=0,
+    collective_dephasing::Real=0)
+    # integer defaults, so that the rates given by the user set the element type
+    rates = float.(promote(emission, dephasing, pumping,
+        collective_emission, collective_dephasing, collective_pumping))
+    _check_rates(rates)
+    num_dicke_states(N)  # throws for N < 1
     return Pim{eltype(rates)}(N, rates...)
 end
 
@@ -127,13 +130,13 @@ Generate the matrix M governing the dynamics for diagonal cases.
 If the initial density matrix and the Hamiltonian is diagonal, the
 evolution of the system is given by the simple ODE: dp/dt = Mp.
 """
-function coefficient_matrix(p::Pim)
+function coefficient_matrix(p::Pim{T}) where {T}
     N = p.N
     nds = num_dicke_states(N)
     max_entries = 9 * nds
     M_row = sizehint!(Int[], max_entries)
     M_col = sizehint!(Int[], max_entries)
-    M_data = sizehint!(Float64[], max_entries)
+    M_data = sizehint!(T[], max_entries)
     entries = (M_row, M_col, M_data)
 
     for dicke_row in 0:N, dicke_col in 0:(div(N, 2)+1)
