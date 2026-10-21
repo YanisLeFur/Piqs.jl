@@ -585,7 +585,7 @@ end
 @testset "Dicke show" begin
     system = Dicke(2, emission=1, dephasing=2, pumping=3, collective_emission=4,
         collective_dephasing=5, collective_pumping=6)
-    out = repr(system)
+    out = sprint(show, MIME"text/plain"(), system)
     @test occursin("N = 2", out)
     @test occursin("Hilbert space dim = (4, 4)", out)
     @test occursin("Number of Dicke states = 4", out)
@@ -595,8 +595,17 @@ end
         @test occursin(rate, out)
     end
 
+    # compact one-line form, used e.g. inside collections
+    @test repr(Dicke(2, emission=1.0, collective_pumping=0.5)) == "Dicke(2, emission=1.0, collective_pumping=0.5)"
+    @test repr(Dicke(2, hamiltonian=jspin(2, op=:z))) == "Dicke(2, hamiltonian=<operator>)"
+    @test repr(Dicke(2, hamiltonian=QobjEvo(((jspin(2, op=:z), (p, t) -> 1.0),)))) ==
+          "Dicke(2, hamiltonian=<time-dependent>)"
+    @test !occursin('\n', repr(system))
+    @test occursin("hamiltonian = time-independent", sprint(show, MIME"text/plain"(), Dicke(2, hamiltonian=jspin(2, op=:z))))
+    @test repr(Pim(3, dephasing=0.5)) == "Pim(3, dephasing=0.5)"
+
     # vanishing rates are not printed
-    out = repr(Dicke(1))
+    out = sprint(show, MIME"text/plain"(), Dicke(1))
     @test !occursin("emission", out)
     @test !occursin("dephasing", out)
     @test !occursin("pumping", out)
@@ -902,4 +911,20 @@ end
     L32 = lindbladian(Dicke(3, emission=1.0f0, dephasing=0.3f0, pumping=0.2f0))
     L64 = lindbladian(Dicke(3, emission=1.0, dephasing=0.3, pumping=0.2))
     @test isapprox(Matrix(L32.data), Matrix(L64.data), rtol=1e-6)
+end
+
+@testset "pisolve checks the shape of the initial state first" begin
+    system = Dicke(2, emission=1.0)
+    # a ket, or a density matrix of the wrong size, gets the size error
+    @test_throws "should have size (4, 4)" pisolve(system, Qobj(sparse([1.0, 0, 0, 0])), [0.0, 1.0])
+    @test_throws "should have size (4, 4)" pisolve(system, dicke(3, 1.5, 1.5), [0.0, 1.0])
+end
+
+@testset "state_degeneracy errors carry the value" begin
+    err = try
+        state_degeneracy(4, -1)
+    catch e
+        e
+    end
+    @test err isa DomainError && err.val == -1
 end

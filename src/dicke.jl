@@ -166,28 +166,29 @@ end
 _check_hamiltonian(H, nds) = throw(ArgumentError(
     "The Hamiltonian must be a `QuantumObject` or a `QuantumObjectEvolution`, got a $(typeof(H))."))
 
+# rates of `x` (a `Dicke` or a `Pim`) that are not zero, as `name => value` pairs
+_nonzero_rates(x) = [name => getfield(x, name) for name in _RATE_NAMES if getfield(x, name) != 0]
+
 function Base.show(io::IO, d::Dicke)
+    print(io, "Dicke(", d.N)
+    for (name, rate) in _nonzero_rates(d)
+        print(io, ", ", name, "=", rate)
+    end
+    isnothing(d.hamiltonian) || print(io, ", hamiltonian=", d.hamiltonian isa QuantumObjectEvolution ? "<time-dependent>" : "<operator>")
+    print(io, ")")
+end
+
+function Base.show(io::IO, ::MIME"text/plain", d::Dicke)
+    println(io, "Dicke system")
     println(io, "N = $(d.N)")
     println(io, "Hilbert space dim = $(d.dshape)")
     println(io, "Number of Dicke states = $(d.nds)")
-    println(io, "Liouvillian space dim = ($(d.nds^2), $(d.nds^2))")
-    if d.emission != 0.0
-        println(io, "emission = $(d.emission)")
+    print(io, "Liouvillian space dim = ($(d.nds^2), $(d.nds^2))")
+    if !isnothing(d.hamiltonian)
+        print(io, "\nhamiltonian = ", d.hamiltonian isa QuantumObjectEvolution ? "time-dependent" : "time-independent")
     end
-    if d.dephasing != 0.0
-        println(io, "dephasing = $(d.dephasing)")
-    end
-    if d.pumping != 0.0
-        println(io, "pumping = $(d.pumping)")
-    end
-    if d.collective_emission != 0.0
-        println(io, "collective_emission = $(d.collective_emission)")
-    end
-    if d.collective_dephasing != 0.0
-        println(io, "collective_dephasing = $(d.collective_dephasing)")
-    end
-    if d.collective_pumping != 0.0
-        println(io, "collective_pumping = $(d.collective_pumping)")
+    for (name, rate) in _nonzero_rates(d)
+        print(io, "\n", name, " = ", rate)
     end
 end
 
@@ -299,7 +300,7 @@ end
 
 
 """
-    jmm1_dictionary(N::Number)
+    jmm1_dictionary(N::Integer)
 
 Get the index in the density matrix for this j, m, m1 value.
 
@@ -318,7 +319,7 @@ A `NamedTuple` of four dictionaries:
 
 The indices are 0-based, as in PIQS.
 """
-function jmm1_dictionary(N::Number)
+function jmm1_dictionary(N::Integer)
 
     jmm1_dict = Dict{Tuple{Int,Int},NTuple{3,Float64}}()
     jmm1_flat = Dict{Int,NTuple{3,Float64}}()
@@ -378,6 +379,11 @@ sol.states[end]
 ```
 """
 function pisolve(d::Dicke, initial_state::QuantumObject, tlist)
+    if size(initial_state.data) != d.dshape
+        msg = "Initial density matrix should have size $(d.dshape), got $(size(initial_state.data))."
+        throw(ArgumentError(msg))
+    end
+
     if !isdiagonal(initial_state)
         msg = "`pisolve` requires a diagonal initial density matrix. "
         msg *= "In general, construct the Liouvillian using `liouvillian_dicke`"
@@ -398,10 +404,6 @@ function pisolve(d::Dicke, initial_state::QuantumObject, tlist)
         throw(ArgumentError(msg))
     end
 
-    if size(initial_state.data) != d.dshape
-        msg = "Initial density matrix should have size $(d.dshape), got $(size(initial_state.data))."
-        throw(ArgumentError(msg))
-    end
     pim = Pim(d.N, emission=d.emission, dephasing=d.dephasing, pumping=d.pumping, collective_emission=d.collective_emission, collective_pumping=d.collective_pumping, collective_dephasing=d.collective_dephasing)
     result = solve(pim, initial_state, tlist)
     return result

@@ -120,14 +120,14 @@ Uses arbitrary-precision integers, so the result is exact for any N.
 
 # Arguments
 - `N` (`Integer`): The number of two-level systems.
-- `j` (`AbstractFloat`): Total spin eigenvalue (cooperativity).
+- `j` (`Real`): Total spin eigenvalue (cooperativity).
 
 # Returns
 - `degeneracy` (`BigInt`): The state degeneracy.
 """
 function state_degeneracy(N::Integer, j::Number)::BigInt
     if j < 0
-        throw(DomainError("j value should be >= 0"))
+        throw(DomainError(j, "j value should be >= 0."))
     end
     if !(j <= N / 2 && isinteger(N / 2 - j))
         throw(DomainError(j, "j value is incorrect for N = $N."))
@@ -146,7 +146,7 @@ same energy.
 
 # Arguments
 - `N` (`Integer`): The number of two-level systems.
-- `m` (`AbstractFloat`): Total spin z-axis projection eigenvalue (proportional to the total energy).
+- `m` (`Real`): Total spin z-axis projection eigenvalue (proportional to the total energy).
 
 # Returns
 - `degeneracy` (`Int`): The m-degeneracy, i.e. the number of j values with j ≥ |m|.
@@ -163,7 +163,7 @@ end
 
 
 """
-    ap(j::AbstractFloat, m::AbstractFloat)
+    ap(j::Real, m::Real)
 
 Calculate the coefficient `ap` by applying J_+ |j, m>.
 
@@ -171,18 +171,18 @@ The action of ap is given by:
 ``J_{+}|j, m\\rangle = A_{+}(j, m)|j, m+1\\rangle``
 
 # Arguments
-- `j` (`AbstractFloat`): The value for j.
-- `m` (`AbstractFloat`): The value for m.
+- `j` (`Real`): The value for j.
+- `m` (`Real`): The value for m.
 
 # Returns
-- `a_plus` (`AbstractFloat`): The value of ``a_{+}``.
+- `a_plus` (`Real`): The value of ``a_{+}``.
 """
-function ap(j::AbstractFloat, m::AbstractFloat)::AbstractFloat
+function ap(j::Real, m::Real)
     return sqrt((j - m) * (j + m + 1))
 end
 
 """
-    am(j::AbstractFloat, m::AbstractFloat)
+    am(j::Real, m::Real)
 
 Calculate the coefficient `am` by applying J_- |j, m>.
 
@@ -190,13 +190,13 @@ The action of am is given by:
 ``J_{-}|j, m\\rangle = A_{-}(j, m)|j, m-1\\rangle``
 
 # Arguments
-- `j` (`AbstractFloat`): The value for j.
-- `m` (`AbstractFloat`): The value for m.
+- `j` (`Real`): The value for j.
+- `m` (`Real`): The value for m.
 
 # Returns
-- `a_minus` (`AbstractFloat`): The value of ``a_{-}``.
+- `a_minus` (`Real`): The value of ``a_{-}``.
 """
-function am(j::AbstractFloat, m::AbstractFloat)::AbstractFloat
+function am(j::Real, m::Real)
     return sqrt((j + m) * (j - m + 1))
 end
 

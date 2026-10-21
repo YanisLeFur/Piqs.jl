@@ -47,6 +47,14 @@ function Pim(N::Integer; emission::Real=0, dephasing::Real=0, pumping::Real=0,
     return Pim{eltype(rates)}(N, rates...)
 end
 
+function Base.show(io::IO, p::Pim)
+    print(io, "Pim(", p.N)
+    for (name, rate) in _nonzero_rates(p)
+        print(io, ", ", name, "=", rate)
+    end
+    print(io, ")")
+end
+
 """
     isdicke(p::Pim, dicke_row::Integer, dicke_col::Integer)
 
@@ -94,7 +102,7 @@ Get the value of j and m for the particular Dicke space element.
 j, m: Float
 The j and m values.
 """
-function calculate_j_m(p::Pim, dicke_row::Integer, dicke_col::Integer)::Tuple{Number,Number}
+function calculate_j_m(p::Pim, dicke_row::Integer, dicke_col::Integer)
     N = p.N
     j = N / 2 - dicke_col
     m = N / 2 - dicke_row
@@ -113,7 +121,7 @@ Get k value from the current row and column element in the Dicke space.
 # Returns
 - `k` (`Integer`): The row index for the matrix M for given Dicke space element
 """
-function calculate_k(p::Pim, dicke_row::Integer, dicke_col::Integer)::Integer
+function calculate_k(p::Pim, dicke_row::Integer, dicke_col::Integer)::Int
     N = p.N
     if dicke_row == 0
         return dicke_col
