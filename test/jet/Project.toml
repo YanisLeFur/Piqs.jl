@@ -1,0 +1,7 @@
+[deps]
+JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
+PIQSolver = "18c821f0-cbdb-4973-8466-97967e7790ff"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[compat]
+JET = "0.9, 0.10, 0.11, 0.12"

@@ -1,4 +1,6 @@
 using JET
+using PIQSolver
+using Test
 
 @testset "JET" begin
     # static analysis of every method of the package for possible errors

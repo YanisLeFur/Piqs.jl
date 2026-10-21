@@ -130,6 +130,15 @@ using Pkg
 Pkg.test("PIQSolver")
 ```
 
+The static analysis with [JET.jl](https://github.com/aviatesk/JET.jl) runs separately, on a
+Julia version supported by JET:
+
+```julia
+withenv("GROUP" => "JET") do
+    Pkg.test("PIQSolver")
+end
+```
+
 ## Acknowledgements
 
 PIQSolver.jl translates the original [PIQS](https://github.com/nathanshammah/piqs) code
