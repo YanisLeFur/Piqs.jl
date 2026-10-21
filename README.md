@@ -58,6 +58,14 @@ using Pkg
 Pkg.add(["PIQSolver", "QuantumToolbox"])
 ```
 
+Until PIQSolver.jl is available in the General registry, install it from GitHub:
+
+```julia
+using Pkg
+Pkg.add(url="https://github.com/YanisLeFur/PIQSolver.jl")
+Pkg.add("QuantumToolbox")
+```
+
 ## Quick start
 
 Superradiant decay: N two-level systems start fully excited and decay collectively,
